@@ -31,3 +31,8 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
+API_data/DataInfo.txt
+API_data/point_int_25study_areas_dharawal.xlsx
+API_data/polygon_API/polygon_API.zip
+classification_data/Dharawal_Uplifts_LUT_Predictor_Names.xlsx
+classification_data/EnvironmentalSpatialLayers150113.xlsx
