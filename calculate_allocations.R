@@ -1,3 +1,4 @@
+library(MASS)
 library(dplyr)
 library(tidyr)
 
@@ -21,10 +22,7 @@ survey_points <- survey_points_raw %>%
 
 
 
-# run models and allocate samples -----------------------------------------
-
-
-# run overall sampling as a for loop - allows cluster implementation more easily
+# parameterise analysis ---------------------------------------------------
 
 orig_sample_iter <- 2 # number of times to sample the original data
 orig_sample_frac <- 0.1
@@ -34,15 +32,15 @@ kfold_times <- 1 # number of times to repeat the k-fold CV
 kfold_k <- 5 # k for k-fold
 
 
+
+# run models and allocate samples -----------------------------------------
+
+
+# run overall sampling as a for loop - allows cluster implementation more easily
+
 for (n_iter in 1:orig_sample_iter) {
   
   sample_data <- ecologist_sample(survey_points, orig_sample_frac)
-  
-  # bootstrap allocations
-  boot_train <- replicate(n = nboot, expr = {sample(sample_data$id)})
-  boot_test <- replicate(n = nboot, expr = {sample(sample_data$id)})
-  
-  # rrcv sample
   
   
 }
@@ -50,6 +48,20 @@ for (n_iter in 1:orig_sample_iter) {
 
 
 
+# unfinished nonsense -----------------------------------------------------
+
+
+boot_train <- replicate(n = nboot, expr = {sample(sample_data$id)})
+boot_test <- replicate(n = nboot, expr = {sample(sample_data$id)})
+
+get_lda_allocation <- function(data, train, test) {
+  fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, data = data[data$id %in% train,])
+  train_preds <- predict(fm)$class
+  test_preds <- predict(fm, newdata = data[data$id %in% test,])$class
+  
+}
+
+test = get_test_from_trains_list(kfold_get_train(sample_data, 5, 1), sample_data$id)
 
 
 
