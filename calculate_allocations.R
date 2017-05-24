@@ -48,6 +48,10 @@ big_list <- list()
 
 for (n_iter in 1:orig_sample_iter) {
   
+  # progress
+  print(paste0("Iteration ", n_iter, " out of ", orig_sample_iter))
+  print(Sys.time())
+  
   # sample data
   sample_data <- ecologist_sample(survey_points, orig_sample_frac)
   
@@ -73,13 +77,12 @@ for (n_iter in 1:orig_sample_iter) {
   names(kfold_list) <- kfold_params$name
   attr(kfold_list, which = "kfold_params") <- kfold_params
   
-  
-  big_list[["boot"]] <- boot_list
-  big_list[["rrcv"]] <- rrcv_list
-  big_list[["kfold"]] <- kfold_list
+  big_list[[n_iter]] <- list(boot = boot_list,
+                             rrcv = rrcv_list,
+                             kfold = kfold_list)
 }
 
-
+save(big_list, file = "big_list.RData")
 
 
 # unfinished nonsense -----------------------------------------------------
