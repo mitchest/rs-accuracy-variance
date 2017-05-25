@@ -20,6 +20,8 @@ survey_points <- survey_points_raw %>%
          id = 1:nrow(.)) %>%
   na.omit()
 
+rm(survey_points_raw)
+
 
 
 # parameterise analysis ---------------------------------------------------
