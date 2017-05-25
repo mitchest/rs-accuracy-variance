@@ -1,24 +1,22 @@
 library(dplyr)
 library(data.table)
+library(ggplot2)
 
 source("accuracy_functions.R")
 
 # get same data as used for allocations
-source_lines("calculate_allocations.R", 10:21) # careful!
-rm(survey_points_raw)
+source_lines("calculate_allocations.R", 8:23) # careful!
+#rm(survey_points_raw)
 
 
-# load("big_list.RData")
-load("big_list_lite.RData") # temporary so development is more wieldly
+load("big_list.RData")
+#load("big_list_lite.RData") # temporary so development is more wieldly
 
-
-iter_n <- big_list[[1]]
-
-
+# decide what results to extract - be VERY careful, and examine the data frame well
 get_this <- data.frame(scenario = c("boot", "boot", rep("rrcv", 12), rep("kfold", 6)),
                        type = c(rep("boot",2), 
-                              rep(names(big_list[[1]][["rrcv"]]), 2), 
-                              rep(names(big_list[[1]][["kfold"]]), 2)),
+                              rep(names(big_list[[1]][["rrcv"]]), each = 2), 
+                              rep(names(big_list[[1]][["kfold"]]), each = 2)),
                        method = rep(c("train_lda", "test_lda"), 10),
                        tt = rep(c("train", "test"), 10),
                        stringsAsFactors = F)
@@ -37,5 +35,17 @@ pa_results <- rbindlist(lapply(
 
 # plots -------------------------------------------------------------------
 
+pa_plotting <- pa_results %>%
+  group_by(iter_n, type, method) %>%
+  summarise(mean = mean(perc_agr),
+            upper = quantile(perc_agr, 0.975),
+            lower = quantile(perc_agr, 0.025),
+            max = max(perc_agr),
+            min = min(perc_agr))
 
 
+ggplot(data = pa_results, aes(y = perc_agr)) +
+  geom_boxplot(aes(x = type, colour = method))
+
+ggplot(data = pa_plotting, aes(x = iter_n)) +
+  geom_(y = mean)
