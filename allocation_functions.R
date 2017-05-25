@@ -67,9 +67,10 @@ get_test_from_trains_list <- function(train_ids_list, full_ids) {
 get_lda_allocation <- function(x, data, train_list, test_list) {
   train <- train_list[[x]]
   test <- test_list[[x]]
-  fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, data = data[train,])
+  fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, 
+            data = semi_join(data, data.frame(id=train), by="id"))
   train_preds <- predict(fm)$class
-  test_preds <- predict(fm, newdata = data[test,])$class
+  test_preds <- predict(fm, newdata = semi_join(data, data.frame(id=test), by="id"))$class
   list(train_preds, test_preds)
 }
 
