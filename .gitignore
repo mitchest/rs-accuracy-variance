@@ -38,3 +38,4 @@ classification_data/Dharawal_Uplifts_LUT_Predictor_Names.xlsx
 classification_data/EnvironmentalSpatialLayers150113.xlsx
 big_list.RData
 *.docx
+big_list_lite.RData
