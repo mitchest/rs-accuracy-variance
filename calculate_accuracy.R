@@ -36,6 +36,21 @@ pa_results <- rbindlist(lapply(
 
 # plots -------------------------------------------------------------------
 
+# plot all data as boxplots
+pa_plot <- ggplot(data = pa_results, aes(y = perc_agr)) +
+  geom_boxplot(aes(x = type, colour = scenario, fill = method))
+ggsave("perc-agr_results.pdf", plot = pa_plot, device = "pdf", width = 10, height = 5)
+
+iter_n_breaks <- list(1:30, 31:60, 61:90, 91:120, 121:150, 151:180, 181:210, 211:240, 241:270, 271:300)
+plot_pa_results <- function(x, data) {
+  ggplot(data = data[data$iter_n %in% x,], aes(y = perc_agr)) +
+    geom_boxplot(aes(x = type, colour = scenario, fill = method))
+}
+pa_res_plots <- lapply(X = iter_n_breaks, FUN = plot_pa_results, pa_results)
+ggsave("perc-agr_results_30iters.pdf", plot = grid.arrange(grobs = pa_res_plots, ncol=2),
+       device = "pdf", width = 20, height = 10)
+
+# looks at mean/CI/min-max summaries
 pa_plotting <- pa_results %>%
   group_by(iter_n, type, method) %>%
   summarise(mean = mean(perc_agr),
@@ -45,23 +60,10 @@ pa_plotting <- pa_results %>%
             min = min(perc_agr))
 
 
-ggplot(data = pa_results, aes(y = perc_agr)) +
-  geom_boxplot(aes(x = type, colour = scenario, fill = method))
-
 ggplot(data = pa_plotting, aes(x = iter_n)) +
   geom_(y = mean)
 
 
-iter_n_breaks <- list(1:30, 31:60, 61:90, 91:120, 121:150, 151:180, 181:210, 211:240, 241:270, 271:300)
-
-pa_results$iter_split <- 
-
-plot_pa_results <- function(x, data) {
-  ggplot(data = data[data$iter_n %in% x,], aes(y = perc_agr)) +
-    geom_boxplot(aes(x = type, colour = scenario, fill = method))
-}
-
-pa_res_plots <- lapply(X = iter_n_breaks, FUN = plot_pa_results, pa_results)
 
 
 
