@@ -1,6 +1,7 @@
+library(ggplot2)
+library(gridExtra)
 library(dplyr)
 library(data.table)
-library(ggplot2)
 
 source("accuracy_functions.R")
 
@@ -45,7 +46,25 @@ pa_plotting <- pa_results %>%
 
 
 ggplot(data = pa_results, aes(y = perc_agr)) +
-  geom_boxplot(aes(x = type, colour = method))
+  geom_boxplot(aes(x = type, colour = scenario, fill = method))
 
 ggplot(data = pa_plotting, aes(x = iter_n)) +
   geom_(y = mean)
+
+
+iter_n_breaks <- list(1:30, 31:60, 61:90, 91:120, 121:150, 151:180, 181:210, 211:240, 241:270, 271:300)
+
+pa_results$iter_split <- 
+
+plot_pa_results <- function(x, data) {
+  ggplot(data = data[data$iter_n %in% x,], aes(y = perc_agr)) +
+    geom_boxplot(aes(x = type, colour = scenario, fill = method))
+}
+
+pa_res_plots <- lapply(X = iter_n_breaks, FUN = plot_pa_results, pa_results)
+
+
+
+
+
+
