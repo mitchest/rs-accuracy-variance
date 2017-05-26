@@ -42,12 +42,13 @@ pa_plot <- ggplot(data = pa_results, aes(y = perc_agr)) +
 ggsave("perc-agr_results.pdf", plot = pa_plot, device = "pdf", width = 10, height = 5)
 
 iter_n_breaks <- list(1:30, 31:60, 61:90, 91:120, 121:150, 151:180, 181:210, 211:240, 241:270, 271:300)
-plot_pa_results <- function(x, data) {
-  ggplot(data = data[data$iter_n %in% x,], aes(y = perc_agr)) +
-    geom_boxplot(aes(x = type, colour = scenario, fill = method))
-}
 pa_res_plots <- lapply(X = iter_n_breaks, FUN = plot_pa_results, pa_results)
 ggsave("perc-agr_results_30iters.pdf", plot = grid.arrange(grobs = pa_res_plots, ncol=2),
+       device = "pdf", width = 20, height = 10)
+
+iter_n_breaks <- as.list(sample(1:300,10))
+pa_res_plots <- lapply(X = iter_n_breaks, FUN = plot_pa_results, pa_results)
+ggsave("perc-agr_results_indiv-iter.pdf", plot = grid.arrange(grobs = pa_res_plots, ncol=2),
        device = "pdf", width = 20, height = 10)
 
 # looks at mean/CI/min-max summaries

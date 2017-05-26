@@ -48,3 +48,14 @@ collect_pa_iteration <- function(iter_n, get_this, big_list, data) {
     data
   )) %>% mutate(iter_n = iter_n)
 }
+
+
+
+
+
+# plots -------------------------------------------------------------------
+
+plot_pa_results <- function(x, data) {
+  ggplot(data = data[data$iter_n %in% x,], aes(y = perc_agr)) +
+    geom_boxplot(aes(x = type, colour = scenario, fill = method))
+}
