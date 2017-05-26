@@ -18,7 +18,8 @@ collect_pa_results <- function(this_row, get_this, iter_n, data) {
             iter_n[["boot"]][[get_this$method[this_row]]],
             data)),
         type = get_this$type[this_row],
-        method = get_this$method[this_row])
+        method = get_this$method[this_row],
+        scenario = get_this$scenario[this_row])
     )
   } else {
     return(
@@ -31,7 +32,8 @@ collect_pa_results <- function(this_row, get_this, iter_n, data) {
             iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]],
             data)),
         type = get_this$type[this_row],
-        method = get_this$method[this_row])
+        method = get_this$method[this_row],
+        scenario = get_this$scenario[this_row])
     )
   }
 }

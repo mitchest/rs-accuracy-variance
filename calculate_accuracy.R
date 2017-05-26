@@ -9,7 +9,7 @@ source_lines("calculate_allocations.R", 8:23) # careful!
 #rm(survey_points_raw)
 
 
-load("big_list.RData")
+load("A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
 #load("big_list_lite.RData") # temporary so development is more wieldly
 
 # decide what results to extract - be VERY careful, and examine the data frame well
