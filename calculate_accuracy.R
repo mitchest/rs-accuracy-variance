@@ -14,13 +14,26 @@ load("A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
 #load("big_list_lite.RData") # temporary so development is more wieldly
 
 # decide what results to extract - be VERY careful, and examine the data frame well
-get_this <- data.frame(scenario = c("boot", "boot", rep("rrcv", 12), rep("kfold", 6)),
-                       type = c(rep("boot",2), 
-                              rep(names(big_list[[1]][["rrcv"]]), each = 2), 
-                              rep(names(big_list[[1]][["kfold"]]), each = 2)),
-                       method = rep(c("train_lda", "test_lda"), 10),
-                       tt = rep(c("train", "test"), 10),
-                       stringsAsFactors = F)
+get_this <- rbind(
+  # for lda classifier
+  data.frame(
+    scenario = c("boot", "boot", rep("rrcv", 12), rep("kfold", 6)),
+    type = c(rep("boot", 2),
+           rep(names(big_list[[1]][["rrcv"]]), each = 2),
+           rep(names(big_list[[1]][["kfold"]]), each = 2)),
+    method = rep(c("train_lda", "test_lda"), 10),
+    tt = rep(c("train", "test"), 10),
+    stringsAsFactors = F),
+  # for knn classifier
+  data.frame(
+    scenario = c("boot", rep("rrcv", 6), rep("kfold", 3)),
+    type = c("boot",
+             names(big_list[[1]][["rrcv"]]),
+             names(big_list[[1]][["kfold"]])),
+    method = rep("test_knn", 10),
+    tt = rep("test", 10),
+    stringsAsFactors = F)
+  )
 
 
 

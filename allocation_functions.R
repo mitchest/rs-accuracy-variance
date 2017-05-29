@@ -67,37 +67,56 @@ get_test_from_trains_list <- function(train_ids_list, full_ids) {
 get_lda_allocation <- function(x, data, train_list, test_list) {
   train <- train_list[[x]]
   test <- test_list[[x]]
-  fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, 
+  fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, # move to character argvar input
             data = semi_join(data, data.frame(id=train), by="id"))
   train_preds <- predict(fm)$class
   test_preds <- predict(fm, newdata = semi_join(data, data.frame(id=test), by="id"))$class
   list(train_preds, test_preds)
 }
 
-rrcv_allocations <- function(x, rrcv_params, rrcv_times, data) {
+get_knn_allocation <- function(x, data, train_list, test_list, bands) {
+  train_dat <- semi_join(data, data.frame(id=train <- train_list[[x]]), by="id")
+  test_dat <- semi_join(data, data.frame(id=test <- test_list[[x]]), by="id")
+  knn1(train = train_dat[,bands], test = test_dat[,bands], cl = train_dat$veg_cl_tm)
+}
+
+rrcv_allocations <- function(x, rrcv_params, rrcv_times, data, bands) {
   train_frac <- rrcv_params$frac[x]
   type <- rrcv_params$type[x]
   
   rrcv_method <- list()
   rrcv_method[["train"]] <- replicate(n = rrcv_times, expr = {rrcv_get_train(data, train_frac, type)}, simplify = F)
   rrcv_method[["test"]] <- lapply(X = rrcv_method[["train"]], FUN = get_test_from_trains, data$id)
+  # mle classifications
   rrcv_lda <- lapply(X = 1:rrcv_times, FUN = get_lda_allocation,
                      data, rrcv_method[["train"]], rrcv_method[["test"]])
   rrcv_method[["train_lda"]] <- lapply(rrcv_lda, `[[`, 1)
   rrcv_method[["test_lda"]] <- lapply(rrcv_lda, `[[`, 2)
+  # knn classifications
+  rrcv_method[["test_knn"]] <- lapply(X = 1:rrcv_times, FUN = get_knn_allocation,
+                                      data, rrcv_method[["train"]], rrcv_method[["test"]], bands)
+  
   rrcv_method
 }
 
-kfold_allocations <- function(x, kfold_params, kfold_times, data) {
+kfold_allocations <- function(x, kfold_params, kfold_times, data, bands) {
   kfold_k <- kfold_params$kfold_k[x]
   type <- kfold_params$type[x]
   
   kfold_method <- list()
   kfold_method[["train"]] <- replicate(n = kfold_times, expr = {kfold_get_train(data, kfold_k, type)}, simplify = T)
   kfold_method[["test"]] <- lapply(kfold_method[["train"]], FUN = get_test_from_trains, data$id)
+  # mle classifications
   kfold_lda <- lapply(X = 1:(kfold_times*kfold_k), FUN = get_lda_allocation,
                       data, kfold_method[["train"]], kfold_method[["test"]])
   kfold_method[["train_lda"]] <- lapply(kfold_lda, `[[`, 1)
   kfold_method[["test_lda"]] <- lapply(kfold_lda, `[[`, 2)
+  # knn classifications
+  kfold_method[["test_knn"]] <- lapply(X = 1:(kfold_times*kfold_k), FUN = get_knn_allocation,
+                                       data, kfold_method[["train"]], kfold_method[["test"]], bands)
+  
   kfold_method
 }
+
+
+
