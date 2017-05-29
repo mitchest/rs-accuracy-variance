@@ -57,5 +57,7 @@ collect_pa_iteration <- function(iter_n, get_this, big_list, data) {
 
 plot_pa_results <- function(x, data) {
   ggplot(data = data[data$iter_n %in% x,], aes(y = perc_agr)) +
-    geom_boxplot(aes(x = type, colour = scenario, fill = method))
+    geom_boxplot(aes(x = type, colour = scenario, fill = method)) +
+    scale_fill_manual(values = c("#fcbba1", "#fb6a4a", "#d4b9da", "#99d8c9", "#238b45")) +
+    scale_colour_manual(values = c("#252525", "#e31a1c", "#3f007d"))
 }

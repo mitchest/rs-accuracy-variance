@@ -60,10 +60,9 @@ pa_results <- rbindlist(lapply(
 
 # plot all data as boxplots
 pa_plot <- ggplot(data = pa_results, aes(y = perc_agr)) +
-  geom_boxplot(aes(x = type, colour = scenario, fill = method))
-  scale_fill_manual(values = c("fcbba1", "", "", "", "", ""))
-
-
+  geom_boxplot(aes(x = type, colour = scenario, fill = method)) +
+  scale_fill_manual(values = c("#fcbba1", "#fb6a4a", "#d4b9da", "#99d8c9", "#238b45")) +
+  scale_colour_manual(values = c("#252525", "#e31a1c", "#3f007d"))
 ggsave("perc-agr_results.pdf", plot = pa_plot, device = "pdf", width = 10, height = 5)
 
 iter_n_breaks <- list(1:30, 31:60, 61:90, 91:120, 121:150, 151:180, 181:210, 211:240, 241:270, 271:300)
