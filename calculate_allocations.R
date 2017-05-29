@@ -28,11 +28,11 @@ rm(survey_points_raw)
 
 # parameterise analysis ---------------------------------------------------
 
-orig_sample_iter <- 1 # number of times to sample the original data
+orig_sample_iter <- 50 # number of times to sample the original data
 orig_sample_frac <- 0.1
-nboot <- 50 # number of bootstrap samples
-rrcv_times <- 50 # number of times to do random repeat CV
-kfold_times <- 10 # number of times to repeat the k-fold CV
+nboot <- 800 # number of bootstrap samples
+rrcv_times <- 800 # number of times to do random repeat CV
+kfold_times <- 100 # number of times to repeat the k-fold CV
 #kfold_k <- 5 # k for k-fold
 bands <- c("blue_mean", "green_mean", "red_mean", "nir_mean")
 
