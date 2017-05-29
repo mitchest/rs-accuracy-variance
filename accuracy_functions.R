@@ -6,6 +6,24 @@ percentage_agreement <- function(reps, true_id, pred_class, data) {
   sum(as.character(data[true_id[[reps]], "veg_cl_tm"]) == as.character(pred_class[[reps]])) / length(pred_class[[reps]])
 }
 
+# entropy and purity stolen from {IntNMF} package
+entropy <- function(reps, true_id, pred_class, data) {
+  conf_mat <- table(as.character(pred_class[[reps]]),
+                    as.character(data[true_id[[reps]], "veg_cl_tm"]))
+  inner_sum <- apply(conf_mat, 1, function(x) {
+    c_size <- sum(x)
+    sum(x * ifelse(x != 0, log2(x/c_size), 0))
+  })
+  -sum(inner_sum)/(sum(conf_mat) * log2(ncol(conf_mat)))
+}
+
+purity <- function(reps, true_id, pred_class, data) {
+  sum(apply(
+    table(as.character(pred_class[[reps]]),
+          as.character(data[true_id[[reps]], "veg_cl_tm"])),
+    1, max)) / length(pred_class[[reps]])
+}
+
 collect_pa_results <- function(this_row, get_this, iter_n, data) {
   if (get_this$type[this_row] == "boot") {
     return(
