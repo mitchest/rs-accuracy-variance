@@ -32,6 +32,15 @@ get_this <- rbind(
              names(big_list[[1]][["kfold"]])),
     method = rep("test_knn", 10),
     tt = rep("test", 10),
+    stringsAsFactors = F),
+  # for rf classifier
+  data.frame(
+    scenario = c("boot", "boot", rep("rrcv", 12), rep("kfold", 6)),
+    type = c(rep("boot", 2),
+             rep(names(big_list[[1]][["rrcv"]]), each = 2),
+             rep(names(big_list[[1]][["kfold"]]), each = 2)),
+    method = rep(c("train_rf", "test_rf"), 10),
+    tt = rep(c("train", "test"), 10),
     stringsAsFactors = F)
   )
 
@@ -52,6 +61,9 @@ pa_results <- rbindlist(lapply(
 # plot all data as boxplots
 pa_plot <- ggplot(data = pa_results, aes(y = perc_agr)) +
   geom_boxplot(aes(x = type, colour = scenario, fill = method))
+  scale_fill_manual(values = c("fcbba1", "", "", "", "", ""))
+
+
 ggsave("perc-agr_results.pdf", plot = pa_plot, device = "pdf", width = 10, height = 5)
 
 iter_n_breaks <- list(1:30, 31:60, 61:90, 91:120, 121:150, 151:180, 181:210, 211:240, 241:270, 271:300)

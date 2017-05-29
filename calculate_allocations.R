@@ -1,5 +1,6 @@
 library(MASS)
 library(class)
+library(ranger)
 library(dplyr)
 library(tidyr)
 
@@ -27,11 +28,11 @@ rm(survey_points_raw)
 
 # parameterise analysis ---------------------------------------------------
 
-orig_sample_iter <- 5 # number of times to sample the original data
+orig_sample_iter <- 1 # number of times to sample the original data
 orig_sample_frac <- 0.1
-nboot <- 800 # number of bootstrap samples
-rrcv_times <- 800 # number of times to do random repeat CV
-kfold_times <- 100 # number of times to repeat the k-fold CV
+nboot <- 50 # number of bootstrap samples
+rrcv_times <- 50 # number of times to do random repeat CV
+kfold_times <- 10 # number of times to repeat the k-fold CV
 #kfold_k <- 5 # k for k-fold
 bands <- c("blue_mean", "green_mean", "red_mean", "nir_mean")
 
@@ -71,6 +72,11 @@ for (n_iter in 1:orig_sample_iter) {
   # boot knn classificaitons
   boot_list[["test_knn"]] <- lapply(X = 1:nboot, FUN = get_knn_allocation,
                                     sample_data, boot_list[["train"]], boot_list[["test"]], bands)
+  # boot rf classifications
+  boot_rf <- lapply(X = 1:nboot, FUN = get_rf_allocation,
+                     sample_data, boot_list[["train"]], boot_list[["test"]])
+  boot_list[["train_rf"]] <- lapply(boot_rf, `[[`, 1)
+  boot_list[["test_rf"]] <- lapply(boot_rf, `[[`, 2)
   
   # get rrcv allocations for each parameterisation
   rrcv_list <- lapply(X = 1:nrow(rrcv_params), FUN = rrcv_allocations,

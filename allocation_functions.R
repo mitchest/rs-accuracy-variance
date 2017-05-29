@@ -80,6 +80,16 @@ get_knn_allocation <- function(x, data, train_list, test_list, bands) {
   knn1(train = train_dat[,bands], test = test_dat[,bands], cl = train_dat$veg_cl_tm)
 }
 
+get_rf_allocation <- function(x, data, train_list, test_list) {
+  train <- train_list[[x]]
+  test <- test_list[[x]]
+  fm <- ranger(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, # move to character argvar input
+            data = semi_join(data, data.frame(id=train), by="id"))
+  train_preds <- fm$predictions
+  test_preds <- predict(fm, data = semi_join(data, data.frame(id=test), by="id"))$predictions
+  list(train_preds, test_preds)
+}
+
 rrcv_allocations <- function(x, rrcv_params, rrcv_times, data, bands) {
   train_frac <- rrcv_params$frac[x]
   type <- rrcv_params$type[x]
@@ -95,6 +105,11 @@ rrcv_allocations <- function(x, rrcv_params, rrcv_times, data, bands) {
   # knn classifications
   rrcv_method[["test_knn"]] <- lapply(X = 1:rrcv_times, FUN = get_knn_allocation,
                                       data, rrcv_method[["train"]], rrcv_method[["test"]], bands)
+  # rf classifications
+  rrcv_rf <- lapply(X = 1:rrcv_times, FUN = get_rf_allocation,
+                     data, rrcv_method[["train"]], rrcv_method[["test"]])
+  rrcv_method[["train_rf"]] <- lapply(rrcv_rf, `[[`, 1)
+  rrcv_method[["test_rf"]] <- lapply(rrcv_rf, `[[`, 2)
   
   rrcv_method
 }
@@ -114,9 +129,11 @@ kfold_allocations <- function(x, kfold_params, kfold_times, data, bands) {
   # knn classifications
   kfold_method[["test_knn"]] <- lapply(X = 1:(kfold_times*kfold_k), FUN = get_knn_allocation,
                                        data, kfold_method[["train"]], kfold_method[["test"]], bands)
+  # mle classifications
+  kfold_rf <- lapply(X = 1:(kfold_times*kfold_k), FUN = get_rf_allocation,
+                      data, kfold_method[["train"]], kfold_method[["test"]])
+  kfold_method[["train_rf"]] <- lapply(kfold_rf, `[[`, 1)
+  kfold_method[["test_rf"]] <- lapply(kfold_rf, `[[`, 2)
   
   kfold_method
 }
-
-
-
