@@ -63,15 +63,23 @@ metric_results <- rbindlist(lapply(
 # plot all data as boxplots
 metrics <- c("perc_agr","entropy","purity","quant_dis","alloc_dis")
 
+for (i in metrics) {
+  print(
+    ggplot(data = metric_results, aes_string(y = i)) +
+      geom_boxplot(aes(x = type, colour = scenario, fill = method), notch = T) +
+      scale_fill_manual(values = c("#fcbba1", "#fb6a4a", "#d4b9da", "#99d8c9", "#238b45")) +
+      scale_colour_manual(values = c("#252525", "#e31a1c", "#3f007d"))
+  )
+}
 
 
 
-# old pa plot
-pa_plot <- ggplot(data = pa_results, aes(y = perc_agr)) +
-  geom_boxplot(aes(x = type, colour = scenario, fill = method), notch = T) +
-  scale_fill_manual(values = c("#fcbba1", "#fb6a4a", "#d4b9da", "#99d8c9", "#238b45")) +
-  scale_colour_manual(values = c("#252525", "#e31a1c", "#3f007d"))
-ggsave("perc-agr_results.pdf", plot = pa_plot, device = "pdf", width = 10, height = 5)
+# # old pa plot
+# pa_plot <- ggplot(data = pa_results, aes(y = perc_agr)) +
+#   geom_boxplot(aes(x = type, colour = scenario, fill = method), notch = T) +
+#   scale_fill_manual(values = c("#fcbba1", "#fb6a4a", "#d4b9da", "#99d8c9", "#238b45")) +
+#   scale_colour_manual(values = c("#252525", "#e31a1c", "#3f007d"))
+# ggsave("perc-agr_results.pdf", plot = pa_plot, device = "pdf", width = 10, height = 5)
 
 
 # test perc agreement on smaller chunks of iters and individual iters
