@@ -64,12 +64,11 @@ metric_results <- rbindlist(lapply(
 metrics <- c("perc_agr","entropy","purity","quant_dis","alloc_dis")
 
 for (i in metrics) {
-  print(
-    ggplot(data = metric_results, aes_string(y = i)) +
-      geom_boxplot(aes(x = type, colour = scenario, fill = method), notch = T) +
-      scale_fill_manual(values = c("#fcbba1", "#fb6a4a", "#d4b9da", "#99d8c9", "#238b45")) +
-      scale_colour_manual(values = c("#252525", "#e31a1c", "#3f007d"))
-  )
+  plt <- ggplot(data = metric_results, aes_string(y = i)) +
+    geom_boxplot(aes(x = type, colour = scenario, fill = method), notch = T) +
+    scale_fill_manual(values = c("#fcbba1", "#fb6a4a", "#d4b9da", "#99d8c9", "#238b45")) +
+    scale_colour_manual(values = c("#252525", "#e31a1c", "#3f007d"))
+  ggsave(paste0(i,"_results.pdf"), plot = plt, device = "pdf", width = 10, height = 5)
 }
 
 
