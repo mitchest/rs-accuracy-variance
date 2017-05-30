@@ -52,7 +52,8 @@ kfold_params <- data.frame(kfold_k = rep(5, 3),
 big_list <- list()
 
 for (n_iter in 1:orig_sample_iter) {
-  
+  if (n_iter == 1) {start_time <- Sys.time()}
+  if (n_iter > 1) {paste0("Finish ~ ", start_time + (((Sys.time() - start_time) / (n_iter-1)) * orig_sample_iter))}
   # progress
   print(paste0("Iteration ", n_iter, " out of ", orig_sample_iter))
   print(Sys.time())
