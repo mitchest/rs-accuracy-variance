@@ -62,8 +62,8 @@ for (n_iter in 1:orig_sample_iter) {
   
   # bootstrapping
   boot_list <- list()
-  boot_list[["train"]] <- replicate(n = nboot, expr = {sample(sample_data$id)}, simplify = F)
-  boot_list[["test"]] <- replicate(n = nboot, expr = {sample(sample_data$id)}, simplify = F)
+  boot_list[["train"]] <- replicate(n = nboot, expr = {sample(sample_data$id, replace = T)}, simplify = F)
+  boot_list[["test"]] <- replicate(n = nboot, expr = {sample(sample_data$id, replace = T)}, simplify = F)
   # boot mle classifications
   boot_lda <- lapply(X = 1:nboot, FUN = get_lda_allocation,
                         sample_data, boot_list[["train"]], boot_list[["test"]])
