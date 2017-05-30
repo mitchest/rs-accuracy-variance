@@ -53,7 +53,7 @@ allocation_disagreement <- function(reps, true_id, pred_class, data) {
 # collect metrics ---------------------------------------------------------
 
 collect_metric_results <- function(this_row, get_this, iter_n, data) {
-  print(get_this[this_row,])
+  #print(get_this[this_row,])
   if (get_this$type[this_row] == "boot") {
     return(
       data.frame(
@@ -143,6 +143,7 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
 
 collect_one_iteration <- function(iter_n, get_this, big_list, data) {
   print(paste0("Collecting iteration ", iter_n))
+  print(Sys.time())
   rbindlist(lapply(
     X = 1:nrow(get_this),
     FUN = collect_metric_results,
