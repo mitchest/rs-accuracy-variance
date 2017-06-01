@@ -91,9 +91,21 @@ for (n_iter in 1:orig_sample_iter) {
   names(kfold_list) <- kfold_params$name
   attr(kfold_list, which = "kfold_params") <- kfold_params
   
+  # get allocations from trinaing on all data
+  use_all_list <- list()
+  fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, data = sample_data)
+  use_all_list[["all_lda"]] <- predict(fm, newdata = survey_points)$class
+  use_all_list[["all_knn"]] <- knn1(train = sample_data[,bands], test = survey_points[,bands], 
+                                    cl = sample_data$veg_cl_tm)
+  fm <- ranger(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean,
+               data = sample_data, num.trees = 250, mtry = 4)
+  use_all_list[["all_rf"]] <- predict(fm, data = survey_points)$predictions
+  
+  # put into one iterations slot
   big_list[[n_iter]] <- list(boot = boot_list,
                              rrcv = rrcv_list,
-                             kfold = kfold_list)
+                             kfold = kfold_list,
+                             alldat = use_all_list)
 }
 
 save(big_list, file = "A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
