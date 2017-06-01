@@ -2,6 +2,7 @@ library(ggplot2)
 library(gridExtra)
 library(dplyr)
 library(data.table)
+library(tidyr)
 
 source("accuracy_functions.R")
 
@@ -71,6 +72,43 @@ for (i in metrics) {
   ggsave(paste0(i,"_results.pdf"), plot = plt, device = "pdf", width = 10, height = 5)
 }
 
+
+# make a long def to plot various method/type combos
+
+metric_results$sample_origin <- NA
+metric_results$sample_origin[grep("test", metric_results$method)] <- "test"
+metric_results$sample_origin[grep("train", metric_results$method)] <- "train"
+
+metric_results$sample_structure <- NA
+metric_results$sample_structure[grep("boot", metric_results$type)] <- "bootstrap"
+metric_results$sample_structure[grep("type1", metric_results$type)] <- "random"
+metric_results$sample_structure[grep("type2", metric_results$type)] <- "by-class"
+metric_results$sample_structure[grep("type3", metric_results$type)] <- "by-class/space"
+
+metric_results$sample_fraction <- NA
+metric_results$sample_fraction[grep("boot", metric_results$type)] <- "bootstrap"
+metric_results$sample_fraction[grep("67", metric_results$type)] <- "67-33"
+metric_results$sample_fraction[grep("80", metric_results$type)] <- "80-20"
+metric_results$sample_fraction[grep("k5", metric_results$type)] <- "5-fold"
+
+metric_results$model <- NA
+metric_results$model[grep("lda", metric_results$method)] <- "max-likelihood"
+metric_results$model[grep("knn", metric_results$method)] <- "nearest-n"
+metric_results$model[grep("rf", metric_results$method)] <- "random-forest"
+
+
+# plot borken down by method and sample structure
+metric_results_long <- metric_results %>%
+  select(perc_agr:alloc_dis, model, sample_structure, sample_fraction, sample_origin, iter_n) %>%
+  gather("metric", "value", perc_agr:alloc_dis)
+
+plt <- ggplot(data = metric_results_long[metric_results_long$iter_n==1,], aes(y = value)) +
+  geom_boxplot(aes(x = sample_structure, fill = sample_origin, colour = sample_fraction), lwd=0.5, notch = T) +
+  scale_fill_manual(values = c("#fee0d2", "#b30000")) +
+  scale_colour_manual(values = c("#2166ac", "#762a83", "#1b7837", "#636363")) +
+  theme_classic() +
+  facet_wrap(~ model + metric, ncol = 5, scales = "free")
+ggsave("method_metric_facet.pdf", plot = plt, device = "pdf", width = 20, height = 10)
 
 
 # # old pa plot
