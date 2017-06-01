@@ -68,15 +68,15 @@ get_lda_allocation <- function(x, data, train_list, test_list) {
   train <- train_list[[x]]
   test <- test_list[[x]]
   fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, # move to character argvar input
-            data = semi_join(data, data.frame(id=train), by="id"))
+            data = inner_join(data, data.frame(id=train), by="id"))
   train_preds <- predict(fm)$class
-  test_preds <- predict(fm, newdata = semi_join(data, data.frame(id=test), by="id"))$class
+  test_preds <- predict(fm, newdata = inner_join(data, data.frame(id=test), by="id"))$class
   list(train_preds, test_preds)
 }
 
 get_knn_allocation <- function(x, data, train_list, test_list, bands) {
-  train_dat <- semi_join(data, data.frame(id=train <- train_list[[x]]), by="id")
-  test_dat <- semi_join(data, data.frame(id=test <- test_list[[x]]), by="id")
+  train_dat <- inner_join(data, data.frame(id=train <- train_list[[x]]), by="id")
+  test_dat <- inner_join(data, data.frame(id=test <- test_list[[x]]), by="id")
   knn1(train = train_dat[,bands], test = test_dat[,bands], cl = train_dat$veg_cl_tm)
 }
 
@@ -84,9 +84,9 @@ get_rf_allocation <- function(x, data, train_list, test_list) {
   train <- train_list[[x]]
   test <- test_list[[x]]
   fm <- ranger(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, # move to character argvar input
-            data = semi_join(data, data.frame(id=train), by="id"), mtry = 4)
+            data = inner_join(data, data.frame(id=train), by="id"), mtry = 4)
   train_preds <- fm$predictions
-  test_preds <- predict(fm, data = semi_join(data, data.frame(id=test), by="id"))$predictions
+  test_preds <- predict(fm, data = inner_join(data, data.frame(id=test), by="id"))$predictions
   list(train_preds, test_preds)
 }
 
