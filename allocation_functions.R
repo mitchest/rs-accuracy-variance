@@ -7,7 +7,7 @@ ecologist_sample <- function(data, samp_frac) {
   as.data.frame(sample_out)
 }
 
-# type: 1 = random, 2 = random strat by veg, 3 = random strat by veg & space
+# type: 1 = random, 2 = random strat by veg, 3 = random strat by veg & space, 4 = spatial block hold-out
 rrcv_get_train <- function(data, train_frac, type) {
   if (type == 1) {
     train_ids <- sample(data$id, nrow(data) * train_frac)
@@ -23,11 +23,16 @@ rrcv_get_train <- function(data, train_frac, type) {
       group_by(veg_cl_tm, studyarea_) %>%
       sample_frac(train_frac)
     train_ids <- as.integer(train_ids$id)
+  } else if (type == 4) {
+    train_ids <- data %>%
+      select(id, studyarea_) %>%
+      filter(studyarea_ %in% (sample(1:25, 25*train_frac)))
+    train_ids <- as.integer(train_ids$id)
   }
   train_ids
 }
 
-# type: 1 = random, 2 = random strat by veg, 3 = random strat by veg & space
+# type: 1 = random, 2 = random strat by veg, 3 = random strat by veg & space, 4 = spatial block hold-out
 kfold_get_train <- function(data, kfold_k, type) {
   if (type == 1) {
     train_ids <- data %>%
@@ -43,6 +48,11 @@ kfold_get_train <- function(data, kfold_k, type) {
       select(id, veg_cl_tm, studyarea_) %>%
       group_by(veg_cl_tm, studyarea_) %>%
       mutate(fold = sample(rep(1:kfold_k, length.out = n())), replace = F)
+  } else if (type == 4) {
+    train_ids <- data %>%
+      select(id, studyarea_) %>%
+      filter(studyarea_ %in% (sample(1:25, 25*train_frac)))
+    train_ids <- as.integer(train_ids$id)
   }
   get_trains_from_kfolds(train_ids)
 }

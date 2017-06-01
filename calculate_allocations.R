@@ -36,13 +36,13 @@ kfold_times <- 100 # number of times to repeat the k-fold CV
 #kfold_k <- 5 # k for k-fold
 bands <- c("blue_mean", "green_mean", "red_mean", "nir_mean")
 
-rrcv_params <- data.frame(frac = rep(c(0.67,0.8), each = 3),
-                          type = rep(1:3, 2),
-                          name = c(paste0("train67type", 1:3),paste0("train80type", 1:3)))
+rrcv_params <- data.frame(frac = rep(c(0.67,0.8), each = 4),
+                          type = rep(1:4, 2),
+                          name = c(paste0("train67type", 1:4),paste0("train80type", 1:4)))
 
-kfold_params <- data.frame(kfold_k = rep(5, 3),
-                          type = 1:3,
-                          name = paste0("k", rep(5,3), "type", c(1:3)))
+kfold_params <- data.frame(kfold_k = rep(5, 4),
+                          type = 1:4,
+                          name = paste0("k", rep(5,4), "type", c(1:4)))
 
 # run models and allocate samples -----------------------------------------
 
