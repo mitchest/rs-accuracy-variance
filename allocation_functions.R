@@ -24,7 +24,7 @@ rrcv_get_train <- function(data, train_frac, type) {
       sample_frac(train_frac)
     train_ids <- as.integer(train_ids$id)
   } else if (type == 4) {
-    blocks <- sample(nblocks, length(unique(data$studyarea_)) * train_frac)
+    blocks <- sample(unique(data$studyarea_), length(unique(data$studyarea_)) * train_frac)
     train_ids <- data %>%
       select(id, studyarea_) %>%
       filter(studyarea_ %in% blocks)
