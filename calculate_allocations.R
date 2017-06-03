@@ -67,27 +67,31 @@ for (n_iter in 1:orig_sample_iter) {
   boot_list[["test"]] <- replicate(n = nboot, expr = {sample(sample_data$id, replace = T)}, simplify = F)
   # boot mle classifications
   boot_lda <- lapply(X = 1:nboot, FUN = get_lda_allocation,
-                        sample_data, boot_list[["train"]], boot_list[["test"]])
+                        sample_data, boot_list[["train"]], boot_list[["test"]], survey_points)
   boot_list[["train_lda"]] <- lapply(boot_lda, `[[`, 1)
   boot_list[["test_lda"]] <- lapply(boot_lda, `[[`, 2)
+  boot_list[["true_lda"]] <- lapply(boot_lda, `[[`, 3)
   # boot knn classificaitons
-  boot_list[["test_knn"]] <- lapply(X = 1:nboot, FUN = get_knn_allocation,
-                                    sample_data, boot_list[["train"]], boot_list[["test"]], bands)
+  boot_knn <- lapply(X = 1:nboot, FUN = get_knn_allocation,
+                                    sample_data, boot_list[["train"]], boot_list[["test"]], bands, survey_points)
+  boot_list[["test_knn"]] <- lapply(boot_knn, `[[`, 1)
+  boot_list[["true_knn"]] <- lapply(boot_knn, `[[`, 2)
   # boot rf classifications
   boot_rf <- lapply(X = 1:nboot, FUN = get_rf_allocation,
-                     sample_data, boot_list[["train"]], boot_list[["test"]])
+                     sample_data, boot_list[["train"]], boot_list[["test"]], survey_points)
   boot_list[["train_rf"]] <- lapply(boot_rf, `[[`, 1)
   boot_list[["test_rf"]] <- lapply(boot_rf, `[[`, 2)
+  boot_list[["true_rf"]] <- lapply(boot_rf, `[[`, 3)
   
   # get rrcv allocations for each parameterisation
   rrcv_list <- lapply(X = 1:nrow(rrcv_params), FUN = rrcv_allocations,
-                      rrcv_params, rrcv_times, sample_data, bands)
+                      rrcv_params, rrcv_times, sample_data, bands, survey_points)
   names(rrcv_list) <- rrcv_params$name
   attr(rrcv_list, which = "rrcv_params") <- rrcv_params
   
   # get kfold allocations for each parameterisation
   kfold_list <- lapply(X = 1:nrow(kfold_params), FUN = kfold_allocations,
-                       kfold_params, kfold_times, sample_data, bands)
+                       kfold_params, kfold_times, sample_data, bands, survey_points)
   names(kfold_list) <- kfold_params$name
   attr(kfold_list, which = "kfold_params") <- kfold_params
   
