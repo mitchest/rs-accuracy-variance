@@ -12,38 +12,50 @@ source_lines("calculate_allocations.R", 7:25) # careful!
 
 
 load("A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
-# big_list <- big_list[1:5]
-# save(big_list, file = "big_list.RData")
-# load("big_list.RData") # temporary so development is more wieldly
+big_list <- big_list[1:3]
+save(big_list, file = "big_list.RData")
+load("big_list.RData") # temporary so development is more wieldly
 
 # decide what results to extract - be VERY careful, and examine the data frame well
 get_this <- rbind(
   # for lda classifier
   data.frame(
-    scenario = c("boot", "boot", rep("rrcv", 12), rep("kfold", 6)),
-    type = c(rep("boot", 2),
-           rep(names(big_list[[1]][["rrcv"]]), each = 2),
-           rep(names(big_list[[1]][["kfold"]]), each = 2)),
-    method = rep(c("train_lda", "test_lda"), 10),
-    tt = rep(c("train", "test"), 10),
+    scenario = c(rep("boot", 3),
+                 rep("rrcv", 24),
+                 rep("kfold", 12),
+                 "alldat"),
+    type = c(rep("boot", 3),
+             rep(names(big_list[[1]][["rrcv"]]), each = 3),
+             rep(names(big_list[[1]][["kfold"]]), each = 3),
+             "alldat"),
+    method = c(rep(c("train_lda", "test_lda", "true_lda"), 13), "all_lda"),
+    tt = c(rep(c("train", "test", "true"), 13), "alldat"),
     stringsAsFactors = F),
   # for knn classifier
   data.frame(
-    scenario = c("boot", rep("rrcv", 6), rep("kfold", 3)),
-    type = c("boot",
-             names(big_list[[1]][["rrcv"]]),
-             names(big_list[[1]][["kfold"]])),
-    method = rep("test_knn", 10),
-    tt = rep("test", 10),
+    scenario = c(rep("boot", 2),
+                 rep("rrcv", 16),
+                 rep("kfold", 8),
+                 "alldat"),
+    type = c(rep("boot",2),
+             rep(names(big_list[[1]][["rrcv"]]), each = 2),
+             rep(names(big_list[[1]][["kfold"]]), each = 2),
+             "alldat"),
+    method = c(rep(c("test_knn", "true_knn"), 13), "all_knn"),
+    tt = c(rep(c("test", "true"), 13), "alldat"),
     stringsAsFactors = F),
   # for rf classifier
   data.frame(
-    scenario = c("boot", "boot", rep("rrcv", 12), rep("kfold", 6)),
-    type = c(rep("boot", 2),
-             rep(names(big_list[[1]][["rrcv"]]), each = 2),
-             rep(names(big_list[[1]][["kfold"]]), each = 2)),
-    method = rep(c("train_rf", "test_rf"), 10),
-    tt = rep(c("train", "test"), 10),
+    scenario = c(rep("boot", 3),
+                 rep("rrcv", 24),
+                 rep("kfold", 12),
+                 "alldat"),
+    type = c(rep("boot", 3),
+             rep(names(big_list[[1]][["rrcv"]]), each = 3),
+             rep(names(big_list[[1]][["kfold"]]), each = 3),
+             "alldat"),
+    method = c(rep(c("train_rf", "test_rf", "true_rf"), 13), "all_rf"),
+    tt = c(rep(c("train", "test", "true"), 13), "alldat"),
     stringsAsFactors = F)
   )
 
@@ -78,18 +90,29 @@ for (i in metrics) {
 metric_results$sample_origin <- NA
 metric_results$sample_origin[grep("test", metric_results$method)] <- "test"
 metric_results$sample_origin[grep("train", metric_results$method)] <- "train"
+metric_results$sample_origin[grep("true", metric_results$method)] <- "true"
+metric_results$sample_origin[grep("all", metric_results$method)] <- "all"
+metric_results$sample_origin <- factor(metric_results$sample_origin, 
+                                       levels = c("all", "true", "train", "test"))
 
 metric_results$sample_structure <- NA
 metric_results$sample_structure[grep("boot", metric_results$type)] <- "bootstrap"
 metric_results$sample_structure[grep("type1", metric_results$type)] <- "random"
-metric_results$sample_structure[grep("type2", metric_results$type)] <- "by-class"
-metric_results$sample_structure[grep("type3", metric_results$type)] <- "by-class/space"
+metric_results$sample_structure[grep("type2", metric_results$type)] <- "class"
+metric_results$sample_structure[grep("type3", metric_results$type)] <- "class-space"
+metric_results$sample_structure[grep("type4", metric_results$type)] <- "block"
+metric_results$sample_structure[grep("alldat", metric_results$type)] <- "all-data"
+metric_results$sample_structure <- factor(metric_results$sample_structure,
+                                          levels = c("all-data", "bootstrap", "random", "block", "class", "class-space"))
 
 metric_results$sample_fraction <- NA
 metric_results$sample_fraction[grep("boot", metric_results$type)] <- "bootstrap"
 metric_results$sample_fraction[grep("67", metric_results$type)] <- "67-33"
 metric_results$sample_fraction[grep("80", metric_results$type)] <- "80-20"
 metric_results$sample_fraction[grep("k5", metric_results$type)] <- "5-fold"
+metric_results$sample_fraction[grep("alldat", metric_results$type)] <- "all-data"
+metric_results$sample_fraction <- factor(metric_results$sample_fraction,
+                                          levels = c("all-data", "bootstrap", "67-33", "80-20", "5-fold"))
 
 metric_results$model <- NA
 metric_results$model[grep("lda", metric_results$method)] <- "max-likelihood"
@@ -100,12 +123,13 @@ metric_results$model[grep("rf", metric_results$method)] <- "random-forest"
 # plot borken down by method and sample structure
 metric_results_long <- metric_results %>%
   select(perc_agr:alloc_dis, model, sample_structure, sample_fraction, sample_origin, iter_n) %>%
-  gather("metric", "value", perc_agr:alloc_dis)
+  gather("metric", "value", perc_agr:alloc_dis) %>%
+  mutate(metric = factor(metric, levels = c("perc_agr", "entropy", "purity", "quant_dis", "alloc_dis")))
 
 plt <- ggplot(data = metric_results_long[metric_results_long$iter_n==1,], aes(y = value)) +
-  geom_boxplot(aes(x = sample_structure, fill = sample_origin, colour = sample_fraction), lwd=0.5, notch = T) +
-  scale_fill_manual(values = c("#fee0d2", "#b30000")) +
-  scale_colour_manual(values = c("#2166ac", "#762a83", "#1b7837", "#636363")) +
+  geom_boxplot(aes(x = sample_structure, fill = sample_origin, colour = sample_fraction), lwd=0.5, notch = F) +
+  scale_colour_manual(values = c("#000000", "#000000", "#c51b8a", "#2c7fb8", "#31a354")) +
+  scale_fill_manual(values = c("#000000", "#9e9ac8", "#fdae6b", "#d94801")) +
   theme_classic() +
   facet_wrap(~ model + metric, ncol = 5, scales = "free")
 ggsave("method_metric_facet.pdf", plot = plt, device = "pdf", width = 20, height = 10)
