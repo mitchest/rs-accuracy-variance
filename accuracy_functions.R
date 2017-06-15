@@ -54,7 +54,7 @@ allocation_disagreement <- function(reps, true_id, pred_class, data) {
 # collect metrics ---------------------------------------------------------
 
 collect_metric_results <- function(this_row, get_this, iter_n, data) {
-  print(get_this[this_row,])
+  #sprint(get_this[this_row,])
   if (get_this$type[this_row] == "boot") {
     if (get_this$tt[this_row] %in% c("train", "test")) {
       true_id <- iter_n[["boot"]][[get_this$tt[this_row]]]

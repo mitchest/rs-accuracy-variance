@@ -12,7 +12,7 @@ source_lines("calculate_allocations.R", 7:25) # careful!
 
 
 load("A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
-big_list <- big_list[1:3]
+big_list <- big_list[1]
 save(big_list, file = "big_list.RData")
 load("big_list.RData") # temporary so development is more wieldly
 
@@ -68,25 +68,26 @@ metric_results <- rbindlist(lapply(
   FUN = collect_one_iteration,
   get_this, big_list, survey_points
 ))
-
+save(metric_results, file="A:/1_UNSW/0_data/Dharawal_project/metric_results.RData")
 
 
 # plots -------------------------------------------------------------------
 
-# plot all data as boxplots
-metrics <- c("perc_agr","entropy","purity","quant_dis","alloc_dis")
+load("A:/1_UNSW/0_data/Dharawal_project/metric_results.RData")
 
-for (i in metrics) {
-  plt <- ggplot(data = metric_results, aes_string(y = i)) +
-    geom_boxplot(aes(x = type, colour = scenario, fill = method), notch = T) +
-    scale_fill_manual(values = c("#fcbba1", "#fb6a4a", "#d4b9da", "#99d8c9", "#238b45")) +
-    scale_colour_manual(values = c("#252525", "#e31a1c", "#3f007d"))
-  ggsave(paste0(i,"_results.pdf"), plot = plt, device = "pdf", width = 10, height = 5)
-}
+# # plot all data as boxplots
+# metrics <- c("perc_agr","entropy","purity","quant_dis","alloc_dis")
+# 
+# for (i in metrics) {
+#   plt <- ggplot(data = metric_results, aes_string(y = i)) +
+#     geom_boxplot(aes(x = type, colour = scenario, fill = method), notch = T) +
+#     scale_fill_manual(values = c("#fcbba1", "#fb6a4a", "#d4b9da", "#99d8c9", "#238b45")) +
+#     scale_colour_manual(values = c("#252525", "#e31a1c", "#3f007d"))
+#   ggsave(paste0(i,"_results.pdf"), plot = plt, device = "pdf", width = 10, height = 5)
+# }
 
 
-# make a long def to plot various method/type combos
-
+# make a long df to plot various method/type combos
 metric_results$sample_origin <- NA
 metric_results$sample_origin[grep("test", metric_results$method)] <- "test"
 metric_results$sample_origin[grep("train", metric_results$method)] <- "train"
@@ -119,20 +120,92 @@ metric_results$model[grep("lda", metric_results$method)] <- "max-likelihood"
 metric_results$model[grep("knn", metric_results$method)] <- "nearest-n"
 metric_results$model[grep("rf", metric_results$method)] <- "random-forest"
 
-
-# plot borken down by method and sample structure
 metric_results_long <- metric_results %>%
   select(perc_agr:alloc_dis, model, sample_structure, sample_fraction, sample_origin, iter_n) %>%
   gather("metric", "value", perc_agr:alloc_dis) %>%
   mutate(metric = factor(metric, levels = c("perc_agr", "entropy", "purity", "quant_dis", "alloc_dis")))
 
-plt <- ggplot(data = metric_results_long[metric_results_long$iter_n==1,], aes(y = value)) +
-  geom_boxplot(aes(x = sample_structure, fill = sample_origin, colour = sample_fraction), lwd=0.5, notch = F) +
+# plot everything... yuk!
+big_plt <- ggplot(data = metric_results_long, aes(y = value)) +
+  geom_boxplot(aes(x = sample_structure, fill = sample_origin, colour = sample_fraction), outlier.size = 0.25, lwd=0.25, notch = F) +
   scale_colour_manual(values = c("#000000", "#000000", "#c51b8a", "#2c7fb8", "#31a354")) +
   scale_fill_manual(values = c("#000000", "#9e9ac8", "#fdae6b", "#d94801")) +
   theme_classic() +
   facet_wrap(~ model + metric, ncol = 5, scales = "free")
-ggsave("method_metric_facet.pdf", plot = plt, device = "pdf", width = 20, height = 10)
+ggsave("method_metric_facet.pdf", plot = big_plt, device = "pdf", width = 20, height = 10)
+
+# plot max-like, group by sample design
+mle_train_test <- metric_results_long %>%
+  filter(sample_origin %in% c("all", "train", "test"),
+         #sample_fraction %in% c("all-data", "67-33", "5-fold"),
+         model == "max-likelihood",
+         metric != "purity") %>%
+  ggplot(., aes(y = value)) +
+  geom_boxplot(aes(x = sample_structure, fill = sample_fraction), outlier.size = 0.25, lwd=0.25) +
+  scale_fill_manual("Resampling design", values = c("#000000", "#000000", "#c51b8a", "#2c7fb8", "#31a354")) +
+  #scale_colour_manual("Sample type", values = c("#000000", "#fdae6b", "#d94801")) + 
+  ylab("Metric value") + xlab("Stratification design") +
+  theme_bw() +
+  facet_grid(metric ~ sample_origin, scales = "free", space = "free", drop = T)
+ggsave("mle_train_test.pdf", plot = mle_train_test, device = "pdf", width = 20, height = 13)
+
+mle_train_test_true <- metric_results_long %>%
+  filter(#sample_origin %in% c("all", "train", "test"),
+         #sample_fraction %in% c("all-data", "67-33", "5-fold"),
+         model == "max-likelihood",
+         metric != "purity") %>%
+  ggplot(., aes(y = value)) +
+  geom_boxplot(aes(x = sample_structure, fill = sample_fraction), outlier.size = 0.25, lwd=0.25) +
+  scale_fill_manual("Resampling design", values = c("#000000", "#000000", "#c51b8a", "#2c7fb8", "#31a354")) +
+  #scale_colour_manual("Sample type", values = c("#000000", "#fdae6b", "#d94801")) + 
+  ylab("Metric value") + xlab("Stratification design") +
+  theme_bw() +
+  facet_grid(metric ~ sample_origin, scales = "free", space = "free", drop = T)
+ggsave("mle_train_test_true.pdf", plot = mle_train_test_true, device = "pdf", width = 20, height = 13)
+
+mle_train_test_true_iters <- metric_results_long %>%
+  filter(#sample_origin %in% c("all", "train", "test"),
+    #sample_fraction %in% c("all-data", "67-33", "5-fold"),
+    metric == "perc_agr",
+    iter_n < 5, 
+    model == "max-likelihood",
+    metric != "purity") %>%
+  ggplot(., aes(y = value)) +
+  geom_boxplot(aes(x = sample_structure, fill = sample_fraction), outlier.size = 0.25, lwd=0.25) +
+  scale_fill_manual("Resampling design", values = c("#000000", "#000000", "#c51b8a", "#2c7fb8", "#31a354")) +
+  #scale_colour_manual("Sample type", values = c("#000000", "#fdae6b", "#d94801")) + 
+  ylab("Metric value") + xlab("Stratification design") +
+  theme_bw() +
+  facet_grid(iter_n ~ sample_origin, scales = "free", space = "free", drop = T)
+ggsave("mle_train_test_true_iters.pdf", plot = mle_train_test_true_iters, device = "pdf", width = 20, height = 13)
+
+knn_train_test_true <- metric_results_long %>%
+  filter(sample_origin %in% c("all", "test", "true"),
+    #sample_fraction %in% c("all-data", "67-33", "5-fold"),
+    model == "nearest-n",
+    metric != "purity") %>%
+  ggplot(., aes(y = value)) +
+  geom_boxplot(aes(x = sample_structure, fill = sample_fraction), outlier.size = 0.25, lwd=0.25) +
+  scale_fill_manual("Resampling design", values = c("#000000", "#000000", "#c51b8a", "#2c7fb8", "#31a354")) +
+  #scale_colour_manual("Sample type", values = c("#000000", "#fdae6b", "#d94801")) + 
+  ylab("Metric value") + xlab("Stratification design") +
+  theme_bw() +
+  facet_grid(metric ~ sample_origin, scales = "free", space = "free", drop = T)
+ggsave("knn_train_test_true.pdf", plot = knn_train_test_true, device = "pdf", width = 20, height = 13)
+
+rf_train_test_true <- metric_results_long %>%
+  filter(#sample_origin %in% c("all", "train", "test"),
+    #sample_fraction %in% c("all-data", "67-33", "5-fold"),
+    model == "random-forest",
+    metric != "purity") %>%
+  ggplot(., aes(y = value)) +
+  geom_boxplot(aes(x = sample_structure, fill = sample_fraction), outlier.size = 0.25, lwd=0.25) +
+  scale_fill_manual("Resampling design", values = c("#000000", "#000000", "#c51b8a", "#2c7fb8", "#31a354")) +
+  #scale_colour_manual("Sample type", values = c("#000000", "#fdae6b", "#d94801")) + 
+  ylab("Metric value") + xlab("Stratification design") +
+  theme_bw() +
+  facet_grid(metric ~ sample_origin, scales = "free", space = "free", drop = T)
+ggsave("rf_train_test_true.pdf", plot = rf_train_test_true, device = "pdf", width = 20, height = 13)
 
 
 # # old pa plot
@@ -166,10 +239,6 @@ pa_plotting <- pa_results %>%
             lower = quantile(perc_agr, 0.025),
             max = max(perc_agr),
             min = min(perc_agr))
-
-
-ggplot(data = pa_plotting, aes(x = iter_n)) +
-  geom_(y = mean)
 
 
 
