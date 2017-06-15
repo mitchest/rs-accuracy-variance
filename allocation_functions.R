@@ -38,7 +38,7 @@ kfold_get_train <- function(data, kfold_k, type) {
   if (type == 1) {
     train_ids <- data %>%
       select(id) %>%
-      mutate(fold = rep(1:kfold_k, length.out = n()))
+      mutate(fold = sample(rep(1:kfold_k, length.out = n())))
   } else if (type == 2) {
     train_ids <- data %>%
       select(id, veg_cl_tm) %>%
