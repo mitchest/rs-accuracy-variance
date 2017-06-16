@@ -12,9 +12,9 @@ source_lines("calculate_allocations.R", 7:25) # careful!
 
 
 load("A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
-big_list <- big_list[1]
-save(big_list, file = "big_list.RData")
-load("big_list.RData") # temporary so development is more wieldly
+# big_list <- big_list[1]
+# save(big_list, file = "big_list.RData")
+# load("big_list.RData") # temporary so development is more wieldly
 
 # decide what results to extract - be VERY careful, and examine the data frame well
 get_this <- rbind(
@@ -123,7 +123,8 @@ metric_results$model[grep("rf", metric_results$method)] <- "random-forest"
 metric_results_long <- metric_results %>%
   select(perc_agr:alloc_dis, model, sample_structure, sample_fraction, sample_origin, iter_n) %>%
   gather("metric", "value", perc_agr:alloc_dis) %>%
-  mutate(metric = factor(metric, levels = c("perc_agr", "entropy", "purity", "quant_dis", "alloc_dis")))
+  mutate(metric = factor(metric, levels = c("perc_agr", "entropy", "purity", "quant_dis", "alloc_dis"))) %>%
+  filter(!value > 1, !value < 0)
 
 # plot everything... yuk!
 big_plt <- ggplot(data = metric_results_long, aes(y = value)) +
@@ -132,7 +133,7 @@ big_plt <- ggplot(data = metric_results_long, aes(y = value)) +
   scale_fill_manual(values = c("#000000", "#9e9ac8", "#fdae6b", "#d94801")) +
   theme_classic() +
   facet_wrap(~ model + metric, ncol = 5, scales = "free")
-ggsave("method_metric_facet.pdf", plot = big_plt, device = "pdf", width = 20, height = 10)
+ggsave("plots/method_metric_facet.pdf", plot = big_plt, device = "pdf", width = 20, height = 10)
 
 # plot max-like, group by sample design
 mle_train_test <- metric_results_long %>%
@@ -147,7 +148,7 @@ mle_train_test <- metric_results_long %>%
   ylab("Metric value") + xlab("Stratification design") +
   theme_bw() +
   facet_grid(metric ~ sample_origin, scales = "free", space = "free", drop = T)
-ggsave("mle_train_test.pdf", plot = mle_train_test, device = "pdf", width = 20, height = 13)
+ggsave("plots/mle_train_test.pdf", plot = mle_train_test, device = "pdf", width = 20, height = 13)
 
 mle_train_test_true <- metric_results_long %>%
   filter(#sample_origin %in% c("all", "train", "test"),
@@ -161,7 +162,7 @@ mle_train_test_true <- metric_results_long %>%
   ylab("Metric value") + xlab("Stratification design") +
   theme_bw() +
   facet_grid(metric ~ sample_origin, scales = "free", space = "free", drop = T)
-ggsave("mle_train_test_true.pdf", plot = mle_train_test_true, device = "pdf", width = 20, height = 13)
+ggsave("plots/mle_train_test_true.pdf", plot = mle_train_test_true, device = "pdf", width = 20, height = 13)
 
 mle_train_test_true_iters <- metric_results_long %>%
   filter(#sample_origin %in% c("all", "train", "test"),
@@ -177,7 +178,7 @@ mle_train_test_true_iters <- metric_results_long %>%
   ylab("Metric value") + xlab("Stratification design") +
   theme_bw() +
   facet_grid(iter_n ~ sample_origin, scales = "free", space = "free", drop = T)
-ggsave("mle_train_test_true_iters.pdf", plot = mle_train_test_true_iters, device = "pdf", width = 20, height = 13)
+ggsave("plots/mle_train_test_true_iters.pdf", plot = mle_train_test_true_iters, device = "pdf", width = 20, height = 13)
 
 knn_train_test_true <- metric_results_long %>%
   filter(sample_origin %in% c("all", "test", "true"),
@@ -191,7 +192,7 @@ knn_train_test_true <- metric_results_long %>%
   ylab("Metric value") + xlab("Stratification design") +
   theme_bw() +
   facet_grid(metric ~ sample_origin, scales = "free", space = "free", drop = T)
-ggsave("knn_train_test_true.pdf", plot = knn_train_test_true, device = "pdf", width = 20, height = 13)
+ggsave("plots/knn_train_test_true.pdf", plot = knn_train_test_true, device = "pdf", width = 20, height = 13)
 
 rf_train_test_true <- metric_results_long %>%
   filter(#sample_origin %in% c("all", "train", "test"),
@@ -205,7 +206,7 @@ rf_train_test_true <- metric_results_long %>%
   ylab("Metric value") + xlab("Stratification design") +
   theme_bw() +
   facet_grid(metric ~ sample_origin, scales = "free", space = "free", drop = T)
-ggsave("rf_train_test_true.pdf", plot = rf_train_test_true, device = "pdf", width = 20, height = 13)
+ggsave("plots/rf_train_test_true.pdf", plot = rf_train_test_true, device = "pdf", width = 20, height = 13)
 
 
 # # old pa plot
@@ -216,16 +217,16 @@ ggsave("rf_train_test_true.pdf", plot = rf_train_test_true, device = "pdf", widt
 # ggsave("perc-agr_results.pdf", plot = pa_plot, device = "pdf", width = 10, height = 5)
 
 
-# test perc agreement on smaller chunks of iters and individual iters
-iter_n_breaks <- list(1:30, 31:60, 61:90, 91:120, 121:150, 151:180, 181:210, 211:240, 241:270, 271:300)
-pa_res_plots <- lapply(X = iter_n_breaks, FUN = plot_pa_results, pa_results)
-ggsave("perc-agr_results_30iters.pdf", plot = grid.arrange(grobs = pa_res_plots, ncol=2),
-       device = "pdf", width = 20, height = 10)
-
-iter_n_breaks <- as.list(sample(1:300,10))
-pa_res_plots <- lapply(X = iter_n_breaks, FUN = plot_pa_results, pa_results)
-ggsave("perc-agr_results_indiv-iter.pdf", plot = grid.arrange(grobs = pa_res_plots, ncol=2),
-       device = "pdf", width = 20, height = 10)
+# # test perc agreement on smaller chunks of iters and individual iters
+# iter_n_breaks <- list(1:30, 31:60, 61:90, 91:120, 121:150, 151:180, 181:210, 211:240, 241:270, 271:300)
+# pa_res_plots <- lapply(X = iter_n_breaks, FUN = plot_pa_results, pa_results)
+# ggsave("perc-agr_results_30iters.pdf", plot = grid.arrange(grobs = pa_res_plots, ncol=2),
+#        device = "pdf", width = 20, height = 10)
+# 
+# iter_n_breaks <- as.list(sample(1:300,10))
+# pa_res_plots <- lapply(X = iter_n_breaks, FUN = plot_pa_results, pa_results)
+# ggsave("perc-agr_results_indiv-iter.pdf", plot = grid.arrange(grobs = pa_res_plots, ncol=2),
+#        device = "pdf", width = 20, height = 10)
 
 
 

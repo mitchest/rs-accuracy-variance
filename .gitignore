@@ -39,3 +39,4 @@ classification_data/EnvironmentalSpatialLayers150113.xlsx
 big_list.RData
 *.docx
 big_list_lite.RData
+plots/
