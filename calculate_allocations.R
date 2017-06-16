@@ -9,7 +9,7 @@ source("allocation_functions.R")
 
 # load data ---------------------------------------------------------------
 
-survey_points_raw <- read.csv("classification_data/dharawal_pointsTM_covars.csv",
+survey_points_raw <- read.csv("classification_data/dharawal_points_ads40.csv",
                           header = T, stringsAsFactors = F)
 
 
@@ -17,7 +17,7 @@ survey_points_raw <- read.csv("classification_data/dharawal_pointsTM_covars.csv"
 # data prep ---------------------------------------------------------------
 survey_points <- survey_points_raw %>%
   filter(veg_cl_tm %in% c("bt", "ew", "ttt", "wh")) %>%
-  select(studyarea_, veg_cl_tm, blue_mean:nir_sd) %>%
+  select(studyarea_, veg_cl_tm, blue_mean:nir_mean) %>%
   mutate(veg_cl_tm = as.factor(veg_cl_tm),
          id = 1:nrow(.)) %>%
   na.omit()
