@@ -68,12 +68,12 @@ metric_results <- rbindlist(lapply(
   FUN = collect_one_iteration,
   get_this, big_list, survey_points
 ))
-save(metric_results, file="A:/1_UNSW/0_data/Dharawal_project/metric_results.RData")
+save(metric_results, file="metric_results.RData")
 
 
 # plots -------------------------------------------------------------------
 
-load("A:/1_UNSW/0_data/Dharawal_project/metric_results.RData")
+load("metric_results.RData")
 
 # # plot all data as boxplots
 # metrics <- c("perc_agr","entropy","purity","quant_dis","alloc_dis")

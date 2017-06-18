@@ -33,18 +33,18 @@ purity <- function(reps, true_id, pred_class, data) {
 # disagreemetns kind of stolen from {diffR} package
 disagreement <- function(reps, true_id, pred_class, data) {
   conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
-  #if(!all(dim(test_mat) == 4)) {return(NA)}
+  if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
   1 - (sum(diag(conf_mat)) / sum(conf_mat))
 }
 
 quantity_disagreement <- function(reps, true_id, pred_class, data) {
   conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
-  #if(!all(dim(test_mat) == 4)) {return(NA)}
+  if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
   sum(abs(apply(conf_mat, 1, sum) - apply(conf_mat, 2, sum))) / 2 / sum(conf_mat)
 }
 
 allocation_disagreement <- function(reps, true_id, pred_class, data) {
-  #if(!all(dim(test_mat) == 4)) {return(NA)}
+  if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
   conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
   disagreement(reps, true_id, pred_class, data) - quantity_disagreement(reps, true_id, pred_class, data)
 }
