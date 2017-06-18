@@ -38,21 +38,23 @@ kfold_get_train <- function(data, kfold_k, type) {
   if (type == 1) {
     train_ids <- data %>%
       select(id) %>%
-      mutate(fold = sample(rep(1:kfold_k, length.out = n())))
+      mutate(fold = sample(rep(sample(kfold_k), length.out = n())))
   } else if (type == 2) {
     train_ids <- data %>%
       select(id, veg_cl_tm) %>%
       group_by(veg_cl_tm) %>%
-      mutate(fold = sample(rep(1:kfold_k, length.out = n())), replace = F)
+      mutate(fold = sample(rep(sample(kfold_k), length.out = n())))
   } else if (type == 3) {
     train_ids <- data %>%
       select(id, veg_cl_tm, studyarea_) %>%
       group_by(veg_cl_tm, studyarea_) %>%
-      mutate(fold = sample(rep(1:kfold_k, length.out = n())), replace = F)
+      mutate(fold = sample(rep(1:kfold_k, length.out = n()))) #odd.....
   } else if (type == 4) {
     train_ids <- data %>%
-      select(id, studyarea_) %>%
-      mutate(fold = ceiling(studyarea_ / kfold_k))
+      select(id, studyarea_)
+    blocks <- unique(data$studyarea_)
+    names(blocks) <- sample(rep(sample(kfold_k), length.out = length(blocks)))
+    train_ids$fold <- names(blocks)[data$studyarea_]
   }
   get_trains_from_kfolds(train_ids)
 }
@@ -78,7 +80,8 @@ get_lda_allocation <- function(x, data, train_list, test_list, all_data) {
   train <- train_list[[x]]
   test <- test_list[[x]]
   fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, # move to character argvar input
-            data = inner_join(data, data.frame(id=train), by="id"))
+            data = inner_join(data, data.frame(id=train), by="id"),
+            prior = rep(1/length(unique(data$veg_cl_tm)), length(unique(data$veg_cl_tm))))
   train_preds <- predict(fm)$class
   test_preds <- predict(fm, newdata = inner_join(data, data.frame(id=test), by="id"))$class
   true_preds <- predict(fm, newdata = all_data)$class
