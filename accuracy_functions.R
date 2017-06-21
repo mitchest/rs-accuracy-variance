@@ -190,3 +190,22 @@ plot_pa_results <- function(x, data) {
     scale_fill_manual(values = c("#fcbba1", "#fb6a4a", "#d4b9da", "#99d8c9", "#238b45")) +
     scale_colour_manual(values = c("#252525", "#e31a1c", "#3f007d"))
 }
+
+plot_train_test <- function(data, model_type, 
+                            origins = c("all", "train", "test"),
+                            structures = c("bootstrap", "random","block", "class", "class-space", "all-data"),
+                            metrics = c("perc_agr", "entropy", "purity", "quant_dis", "alloc_dis"),
+                            quants = c(0.05,0.5,0.9), suffix = "") {
+  plt <- data %>%
+    filter(sample_origin %in% origins,
+           sample_structure %in% structures,
+           model == model_type,
+           metric %in% metrics) %>%
+    ggplot(., aes(y = value)) +
+    geom_violin(aes(x = sample_origin, fill = sample_fraction), scale = "area", draw_quantiles = quants, lwd=0.25) +
+    scale_fill_manual("Resampling design", values = c("#969696", "#969696", "#cb181d", "#fc9272", "#31a354")) +
+    #scale_colour_manual("Sample type", values = c("#969696", "#fdae6b", "#d94801")) + 
+    ylab("Metric value") + xlab("Stratification design") + theme_bw() +
+    facet_grid(metric ~ sample_structure, scales = "free", space = "free", drop = T)
+  ggsave(plot = plt, filename = paste0("plots/",model_type,suffix,".pdf"), device = "pdf", width = 20, height = 13)
+}
