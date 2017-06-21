@@ -44,8 +44,8 @@ quantity_disagreement <- function(reps, true_id, pred_class, data) {
 }
 
 allocation_disagreement <- function(reps, true_id, pred_class, data) {
-  if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
   conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
+  if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
   disagreement(reps, true_id, pred_class, data) - quantity_disagreement(reps, true_id, pred_class, data)
 }
 
