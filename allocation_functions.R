@@ -10,27 +10,26 @@ ecologist_sample <- function(data, samp_frac) {
 # type: 1 = random, 2 = random strat by veg, 3 = random strat by veg & space, 4 = spatial block hold-out
 rrcv_get_train <- function(data, train_frac, type) {
   if (type == 1) {
-    train_ids <- sample(data$id, nrow(data) * train_frac)
+    train_ids <- data %>%
+      select(id) %>%
+      sample_frac(train_frac)
   } else if (type == 2) {
     train_ids <- data %>%
       select(id, veg_cl_tm) %>%
       group_by(veg_cl_tm) %>%
       sample_frac(train_frac)
-    train_ids <- as.integer(train_ids$id)
   } else if (type == 3) {
     train_ids <- data %>%
       select(id, veg_cl_tm, studyarea_) %>%
       group_by(veg_cl_tm, studyarea_) %>%
       sample_frac(train_frac)
-    train_ids <- as.integer(train_ids$id)
   } else if (type == 4) {
     blocks <- sample(unique(data$studyarea_), length(unique(data$studyarea_)) * train_frac)
     train_ids <- data %>%
       select(id, studyarea_) %>%
       filter(studyarea_ %in% blocks)
-    train_ids <- as.integer(train_ids$id)
   }
-  train_ids
+  as.integer(train_ids$id)
 }
 
 # type: 1 = random, 2 = random strat by veg, 3 = random strat by veg & space, 4 = spatial block hold-out
@@ -107,6 +106,31 @@ get_rf_allocation <- function(x, data, train_list, test_list, all_data) {
   test_preds <- predict(fm, data = inner_join(data, data.frame(id=test), by="id"))$predictions
   true_preds <- predict(fm, data = all_data)$predictions
   list(train_preds, test_preds, true_preds)
+}
+
+boot_allocations <- function(nboot, data, bands, all_data) {
+  boot_method <- list()
+  boot_method[["train"]] <- replicate(n = nboot, expr = {sample(sample_data$id, replace = T)}, simplify = F)
+  boot_method[["test"]] <- lapply(X = boot_method[["train"]], FUN = get_test_from_trains, data$id)
+  # mle classifications
+  boot_lda <- lapply(X = 1:nboot, FUN = get_lda_allocation,
+                     data, boot_method[["train"]], boot_method[["test"]], all_data)
+  boot_method[["train_lda"]] <- lapply(boot_lda, `[[`, 1)
+  boot_method[["test_lda"]] <- lapply(boot_lda, `[[`, 2)
+  boot_method[["true_lda"]] <- lapply(boot_lda, `[[`, 3)
+  # knn classifications
+  boot_knn <- lapply(X = 1:nboot, FUN = get_knn_allocation,
+                     data, boot_method[["train"]], boot_method[["test"]], bands, all_data)
+  boot_method[["test_knn"]] <- lapply(boot_knn, `[[`, 1)
+  boot_method[["true_knn"]] <- lapply(boot_knn, `[[`, 2)
+  # rf classifications
+  boot_rf <- lapply(X = 1:nboot, FUN = get_rf_allocation,
+                    data, boot_method[["train"]], boot_method[["test"]], all_data)
+  boot_method[["train_rf"]] <- lapply(boot_rf, `[[`, 1)
+  boot_method[["test_rf"]] <- lapply(boot_rf, `[[`, 2)
+  boot_method[["true_rf"]] <- lapply(boot_rf, `[[`, 3)
+  
+  boot_method
 }
 
 rrcv_allocations <- function(x, rrcv_params, rrcv_times, data, bands, all_data) {

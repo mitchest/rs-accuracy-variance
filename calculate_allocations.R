@@ -28,11 +28,11 @@ rm(survey_points_raw)
 
 # parameterise analysis ---------------------------------------------------
 
-orig_sample_iter <- 50 # number of times to sample the original data
+orig_sample_iter <- 2 # number of times to sample the original data
 orig_sample_frac <- 0.1
-nboot <- 800 # number of bootstrap samples
-rrcv_times <- 800 # number of times to do random repeat CV
-kfold_times <- 160 # number of times to repeat the k-fold CV
+nboot <- 10 # number of bootstrap samples
+rrcv_times <- 10 # number of times to do random repeat CV
+kfold_times <- 2 # number of times to repeat the k-fold CV
 #kfold_k <- 5 # k for k-fold
 bands <- c("blue_mean", "green_mean", "red_mean", "nir_mean")
 
@@ -61,27 +61,33 @@ for (n_iter in 1:orig_sample_iter) {
   # sample data
   sample_data <- ecologist_sample(survey_points, orig_sample_frac)
   
-  # bootstrapping
-  boot_list <- list()
-  boot_list[["train"]] <- replicate(n = nboot, expr = {sample(sample_data$id, replace = T)}, simplify = F)
-  boot_list[["test"]] <- replicate(n = nboot, expr = {sample(sample_data$id, replace = T)}, simplify = F)
-  # boot mle classifications
-  boot_lda <- lapply(X = 1:nboot, FUN = get_lda_allocation,
-                        sample_data, boot_list[["train"]], boot_list[["test"]], survey_points)
-  boot_list[["train_lda"]] <- lapply(boot_lda, `[[`, 1)
-  boot_list[["test_lda"]] <- lapply(boot_lda, `[[`, 2)
-  boot_list[["true_lda"]] <- lapply(boot_lda, `[[`, 3)
-  # boot knn classificaitons
-  boot_knn <- lapply(X = 1:nboot, FUN = get_knn_allocation,
-                                    sample_data, boot_list[["train"]], boot_list[["test"]], bands, survey_points)
-  boot_list[["test_knn"]] <- lapply(boot_knn, `[[`, 1)
-  boot_list[["true_knn"]] <- lapply(boot_knn, `[[`, 2)
-  # boot rf classifications
-  boot_rf <- lapply(X = 1:nboot, FUN = get_rf_allocation,
-                     sample_data, boot_list[["train"]], boot_list[["test"]], survey_points)
-  boot_list[["train_rf"]] <- lapply(boot_rf, `[[`, 1)
-  boot_list[["test_rf"]] <- lapply(boot_rf, `[[`, 2)
-  boot_list[["true_rf"]] <- lapply(boot_rf, `[[`, 3)
+  # get bootstrap allocations for each parameterisation
+  boot_list <- boot_allocations(nboot, sample_data, bands, survey_points)
+  
+  # NOTE ######################################################################################
+  # This code block samples BOTH training AND test subsets using bootstrapping with replacement
+  #############################################################################################
+  # boot_list <- list()
+  # boot_list[["train"]] <- replicate(n = nboot, expr = {sample(sample_data$id, replace = T)}, simplify = F)
+  # boot_list[["test"]] <- replicate(n = nboot, expr = {sample(sample_data$id, replace = T)}, simplify = F)
+  # # boot mle classifications
+  # boot_lda <- lapply(X = 1:nboot, FUN = get_lda_allocation,
+  #                       sample_data, boot_list[["train"]], boot_list[["test"]], survey_points)
+  # boot_list[["train_lda"]] <- lapply(boot_lda, `[[`, 1)
+  # boot_list[["test_lda"]] <- lapply(boot_lda, `[[`, 2)
+  # boot_list[["true_lda"]] <- lapply(boot_lda, `[[`, 3)
+  # # boot knn classificaitons
+  # boot_knn <- lapply(X = 1:nboot, FUN = get_knn_allocation,
+  #                                   sample_data, boot_list[["train"]], boot_list[["test"]], bands, survey_points)
+  # boot_list[["test_knn"]] <- lapply(boot_knn, `[[`, 1)
+  # boot_list[["true_knn"]] <- lapply(boot_knn, `[[`, 2)
+  # # boot rf classifications
+  # boot_rf <- lapply(X = 1:nboot, FUN = get_rf_allocation,
+  #                    sample_data, boot_list[["train"]], boot_list[["test"]], survey_points)
+  # boot_list[["train_rf"]] <- lapply(boot_rf, `[[`, 1)
+  # boot_list[["test_rf"]] <- lapply(boot_rf, `[[`, 2)
+  # boot_list[["true_rf"]] <- lapply(boot_rf, `[[`, 3)
+  #############################################################################################
   
   # get rrcv allocations for each parameterisation
   rrcv_list <- lapply(X = 1:nrow(rrcv_params), FUN = rrcv_allocations,
