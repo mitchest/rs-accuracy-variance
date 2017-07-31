@@ -9,11 +9,21 @@ source_lines <- function(file, lines){
 get_conf_mat <- function(reps, true_id, pred_class, data) {
   table(as.character(pred_class[[reps]]),
         as.character(data[true_id[[reps]], "veg_cl_tm"]))
+  # note danger here that it relies on always having at least one case for each class (that is, it relies on the alphabetical factor ordering to ensure confusion matrices are identical in structure)
 }
 
 percentage_agreement <- function(reps, true_id, pred_class, data) {
-  sum(as.character(data[true_id[[reps]], "veg_cl_tm"]) == as.character(pred_class[[reps]])) / length(pred_class[[reps]])
-  # (sum(diag(conf_mat)) / sum(conf_mat)) # slower?
+  # sum(as.character(data[true_id[[reps]], "veg_cl_tm"]) == as.character(pred_class[[reps]])) / length(pred_class[[reps]])
+  conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
+  sum(diag(conf_mat)) / sum(conf_mat) # xtab method quicker?
+}
+
+cohens_kappa <- function(reps, true_id, pred_class, data) {
+  conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
+  props <- conf_mat / sum(conf_mat)
+  cor_prob <- sum(diag(props))
+  chance_prob <- sum( apply(props, 1, sum) * apply(props, 2, sum) )
+  (cor_prob - chance_prob)/(1 - chance_prob)
 }
 
 # entropy and purity stolen from {IntNMF} package
