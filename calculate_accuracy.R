@@ -111,11 +111,12 @@ metric_results$model[grep("rf", metric_results$method)] <- "random-forest"
 metric_results_long <- metric_results %>%
   select(perc_agr:alloc_dis, model, sample_structure, sample_fraction, sample_origin, iter_n) %>%
   gather("metric", "value", perc_agr:alloc_dis) %>%
-  mutate(metric = factor(metric, levels = c("perc_agr", "entropy", "purity", "quant_dis", "alloc_dis"))) %>%
+  mutate(metric = factor(metric, levels = c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis"))) %>%
   filter(!is.na(value))
 
 
 # main plots
+plot_train_test(metric_results_long, "max-likelihood", origins = c("train","test"))
 plot_train_test(metric_results_long, "max-likelihood")
 plot_train_test(metric_results_long, "random-forest")
 plot_train_test(metric_results_long, "nearest-n")

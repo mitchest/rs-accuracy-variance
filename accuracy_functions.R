@@ -20,9 +20,13 @@ percentage_agreement <- function(reps, true_id, pred_class, data) {
 
 cohens_kappa <- function(reps, true_id, pred_class, data) {
   conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
-  props <- conf_mat / sum(conf_mat)
-  cor_prob <- sum(diag(props))
-  chance_prob <- sum( apply(props, 1, sum) * apply(props, 2, sum) )
+  if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
+  # props <- conf_mat / sum(conf_mat)
+  # cor_prob <- sum(diag(props))
+  # chance_prob <- sum( apply(props, 1, sum) * apply(props, 2, sum) )
+  # below seems to be a touch quicker...
+  cor_prob <- sum(diag(conf_mat)) / sum(conf_mat)
+  chance_prob <- crossprod(colSums(conf_mat) / sum(conf_mat), rowSums(conf_mat) / sum(conf_mat))[1]
   (cor_prob - chance_prob)/(1 - chance_prob)
 }
 
@@ -80,6 +84,13 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
             true_id,
             iter_n[["boot"]][[get_this$method[this_row]]],
             data)),
+        kappa = unlist(
+          lapply(
+            X = 1:length(iter_n[["boot"]][[1]]),
+            FUN = cohens_kappa,
+            true_id,
+            iter_n[["boot"]][[get_this$method[this_row]]],
+            data)),
         entropy = unlist(
           lapply(
             X = 1:length(iter_n[["boot"]][[1]]),
@@ -116,6 +127,8 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
     return(data.frame(
       perc_agr = percentage_agreement(1, list(data$id), 
                                       list(iter_n[["alldat"]][[get_this$method[this_row]]]), data),
+      kappa = cohens_kappa(1, list(data$id), 
+                                      list(iter_n[["alldat"]][[get_this$method[this_row]]]), data),
       entropy = entropy(1, list(data$id), 
                         list(iter_n[["alldat"]][[get_this$method[this_row]]]), data),
       purity = purity(1, list(data$id), 
@@ -140,6 +153,13 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
           lapply(
             X = 1:length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]),
             FUN = percentage_agreement,
+            true_id,
+            iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]],
+            data)),
+        kappa = unlist(
+          lapply(
+            X = 1:length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]),
+            FUN = cohens_kappa,
             true_id,
             iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]],
             data)),
@@ -204,7 +224,7 @@ plot_pa_results <- function(x, data) {
 plot_train_test <- function(data, model_type, 
                             origins = c("all", "train", "test"),
                             structures = c("bootstrap", "random","block", "class", "class-space", "all-data"),
-                            metrics = c("perc_agr", "entropy", "purity", "quant_dis", "alloc_dis"),
+                            metrics = c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis"),
                             quants = c(0.05,0.5,0.9), suffix = "") {
   plt <- data %>%
     filter(sample_origin %in% origins,
