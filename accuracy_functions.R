@@ -12,14 +12,12 @@ get_conf_mat <- function(reps, true_id, pred_class, data) {
   # note danger here that it relies on always having at least one case for each class (that is, it relies on the alphabetical factor ordering to ensure confusion matrices are identical in structure)
 }
 
-percentage_agreement <- function(reps, true_id, pred_class, data) {
+percentage_agreement <- function(conf_mat) {
   # sum(as.character(data[true_id[[reps]], "veg_cl_tm"]) == as.character(pred_class[[reps]])) / length(pred_class[[reps]])
-  conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
   sum(diag(conf_mat)) / sum(conf_mat) # xtab method quicker?
 }
 
-cohens_kappa <- function(reps, true_id, pred_class, data) {
-  conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
+cohens_kappa <- function(conf_mat) {
   if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
   # props <- conf_mat / sum(conf_mat)
   # cor_prob <- sum(diag(props))
@@ -31,8 +29,7 @@ cohens_kappa <- function(reps, true_id, pred_class, data) {
 }
 
 # entropy and purity stolen from {IntNMF} package
-entropy <- function(reps, true_id, pred_class, data) {
-  conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
+entropy <- function(conf_mat) {
   inner_sum <- apply(conf_mat, 1, function(x) {
     c_size <- sum(x)
     sum(x * ifelse(x != 0, log2(x/c_size), 0))
@@ -40,27 +37,24 @@ entropy <- function(reps, true_id, pred_class, data) {
   -sum(inner_sum)/(sum(conf_mat) * log2(ncol(conf_mat)))
 }
 
-purity <- function(reps, true_id, pred_class, data) {
-  sum(apply(get_conf_mat(reps, true_id, pred_class, data), 1, max)) / length(pred_class[[reps]])
+purity <- function(conf_mat) {
+  sum(apply(conf_mat, 1, max)) / sum(conf_mat)
 }
 
 # disagreemetns kind of stolen from {diffeR} package
-disagreement <- function(reps, true_id, pred_class, data) {
-  conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
+disagreement <- function(conf_mat) {
   if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
   1 - (sum(diag(conf_mat)) / sum(conf_mat))
 }
 
-quantity_disagreement <- function(reps, true_id, pred_class, data) {
-  conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
+quantity_disagreement <- function(conf_mat) {
   if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
   sum(abs(apply(conf_mat, 1, sum) - apply(conf_mat, 2, sum))) / 2 / sum(conf_mat)
 }
 
-allocation_disagreement <- function(reps, true_id, pred_class, data) {
-  conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
+allocation_disagreement <- function(conf_mat) {
   if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
-  disagreement(reps, true_id, pred_class, data) - quantity_disagreement(reps, true_id, pred_class, data)
+  disagreement(conf_mat) - quantity_disagreement(conf_mat)
 }
 
 
@@ -75,68 +69,33 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
     } else {
       true_id <- rep(list(data$id), length(iter_n[["boot"]][[1]]))
     }
+    conf_mat_list <- lapply(
+      X = 1:length(iter_n[["boot"]][[1]]),
+      FUN = get_conf_mat,
+      true_id,
+      iter_n[["boot"]][[get_this$method[this_row]]],
+      data)
     return(
       data.frame(
-        perc_agr = unlist(
-          lapply(
-            X = 1:length(iter_n[["boot"]][[1]]),
-            FUN = percentage_agreement,
-            true_id,
-            iter_n[["boot"]][[get_this$method[this_row]]],
-            data)),
-        kappa = unlist(
-          lapply(
-            X = 1:length(iter_n[["boot"]][[1]]),
-            FUN = cohens_kappa,
-            true_id,
-            iter_n[["boot"]][[get_this$method[this_row]]],
-            data)),
-        entropy = unlist(
-          lapply(
-            X = 1:length(iter_n[["boot"]][[1]]),
-            FUN = entropy,
-            true_id,
-            iter_n[["boot"]][[get_this$method[this_row]]],
-            data)),
-        purity = unlist(
-          lapply(
-            X = 1:length(iter_n[["boot"]][[1]]),
-            FUN = purity,
-            true_id,
-            iter_n[["boot"]][[get_this$method[this_row]]],
-            data)),
-        quant_dis = unlist(
-          lapply(
-            X = 1:length(iter_n[["boot"]][[1]]),
-            FUN = quantity_disagreement,
-            true_id,
-            iter_n[["boot"]][[get_this$method[this_row]]],
-            data)),
-        alloc_dis = unlist(
-          lapply(
-            X = 1:length(iter_n[["boot"]][[1]]),
-            FUN = allocation_disagreement,
-            true_id,
-            iter_n[["boot"]][[get_this$method[this_row]]],
-            data)),
+        perc_agr = unlist(lapply(conf_mat_list, percentage_agreement)),
+        kappa = unlist(lapply(conf_mat_list, cohens_kappa)),
+        entropy = unlist(lapply(conf_mat_list, entropy)),
+        purity = unlist(lapply(conf_mat_list, purity)),
+        quant_dis = unlist(lapply(conf_mat_list, quantity_disagreement)),
+        alloc_dis = unlist(lapply(conf_mat_list, allocation_disagreement)),
         type = get_this$type[this_row],
         method = get_this$method[this_row],
         scenario = get_this$scenario[this_row])
     )
   } else if (get_this$type[this_row] == "alldat") {
+    the_conf_mat <- get_conf_mat(1, list(data$id), list(iter_n[["alldat"]][[get_this$method[this_row]]]), data)
     return(data.frame(
-      perc_agr = percentage_agreement(1, list(data$id), 
-                                      list(iter_n[["alldat"]][[get_this$method[this_row]]]), data),
-      kappa = cohens_kappa(1, list(data$id), 
-                                      list(iter_n[["alldat"]][[get_this$method[this_row]]]), data),
-      entropy = entropy(1, list(data$id), 
-                        list(iter_n[["alldat"]][[get_this$method[this_row]]]), data),
-      purity = purity(1, list(data$id), 
-                      list(iter_n[["alldat"]][[get_this$method[this_row]]]), data),
-      quant_dis = quantity_disagreement(1, list(data$id), 
-                                        list(iter_n[["alldat"]][[get_this$method[this_row]]]), data),
-      alloc_dis = allocation_disagreement(1, list(data$id), 
-                                          list(iter_n[["alldat"]][[get_this$method[this_row]]]), data),
+      perc_agr = percentage_agreement(the_conf_mat),
+      kappa = cohens_kappa(the_conf_mat),
+      entropy = entropy(the_conf_mat),
+      purity = purity(the_conf_mat),
+      quant_dis = quantity_disagreement(the_conf_mat),
+      alloc_dis = allocation_disagreement(the_conf_mat),
       type = get_this$type[this_row],
       method = get_this$method[this_row],
       scenario = get_this$scenario[this_row])
@@ -147,50 +106,20 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
     } else {
       true_id <- rep(list(data$id), length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]))
     }
+    conf_mat_list <- lapply(
+      X = 1:length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]),
+      FUN = get_conf_mat,
+      true_id,
+      iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]],
+      data)
     return(
       data.frame(
-        perc_agr = unlist(
-          lapply(
-            X = 1:length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]),
-            FUN = percentage_agreement,
-            true_id,
-            iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]],
-            data)),
-        kappa = unlist(
-          lapply(
-            X = 1:length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]),
-            FUN = cohens_kappa,
-            true_id,
-            iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]],
-            data)),
-        entropy = unlist(
-          lapply(
-            X = 1:length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]),
-            FUN = entropy,
-            true_id,
-            iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]],
-            data)),
-        purity = unlist(
-          lapply(
-            X = 1:length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]),
-            FUN = purity,
-            true_id,
-            iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]],
-            data)),
-        quantity_disagreement = unlist(
-          lapply(
-            X = 1:length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]),
-            FUN = quantity_disagreement,
-            true_id,
-            iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]],
-            data)),
-        allocation_disagreement = unlist(
-          lapply(
-            X = 1:length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]),
-            FUN = allocation_disagreement,
-            true_id,
-            iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]],
-            data)),
+        perc_agr = unlist(lapply(conf_mat_list, percentage_agreement)),
+        kappa = unlist(lapply(conf_mat_list, cohens_kappa)),
+        entropy = unlist(lapply(conf_mat_list, entropy)),
+        purity = unlist(lapply(conf_mat_list, purity)),
+        quant_dis = unlist(lapply(conf_mat_list, quantity_disagreement)),
+        alloc_dis = unlist(lapply(conf_mat_list, allocation_disagreement)),
         type = get_this$type[this_row],
         method = get_this$method[this_row],
         scenario = get_this$scenario[this_row])
