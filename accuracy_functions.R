@@ -30,7 +30,7 @@ purity <- function(reps, true_id, pred_class, data) {
   sum(apply(get_conf_mat(reps, true_id, pred_class, data), 1, max)) / length(pred_class[[reps]])
 }
 
-# disagreemetns kind of stolen from {diffR} package
+# disagreemetns kind of stolen from {diffeR} package
 disagreement <- function(reps, true_id, pred_class, data) {
   conf_mat <- get_conf_mat(reps, true_id, pred_class, data)
   if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}

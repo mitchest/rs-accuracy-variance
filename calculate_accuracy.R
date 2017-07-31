@@ -132,7 +132,7 @@ mle_train_test_iters <- metric_results_long %>%
     model == "max-likelihood",
     metric != "purity") %>%
   ggplot(., aes(y = value)) +
-  geom_violin(aes(x = sample_structure, fill = sample_fraction), scale = "area", draw_quantiles = quants, lwd=0.25) +
+  geom_violin(aes(x = sample_structure, fill = sample_fraction), scale = "area", draw_quantiles = c(0.05,0.5,0.9), lwd=0.25) +
   scale_fill_manual("Resampling design", values = c("#969696", "#cb181d", "#fc9272", "#31a354")) +
   #scale_colour_manual("Sample type", values = c("#969696", "#fdae6b", "#d94801")) + 
   ylab("Metric value") + xlab("Stratification design") +
