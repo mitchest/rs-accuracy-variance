@@ -28,11 +28,11 @@ rm(survey_points_raw)
 
 # parameterise analysis ---------------------------------------------------
 
-orig_sample_iter <- 2 # number of times to sample the original data
+orig_sample_iter <- 20 # number of times to sample the original data
 orig_sample_frac <- 0.1
-nboot <- 10 # number of bootstrap samples
-rrcv_times <- 10 # number of times to do random repeat CV
-kfold_times <- 2 # number of times to repeat the k-fold CV
+nboot <- 800 # number of bootstrap samples
+rrcv_times <- 800 # number of times to do random repeat CV
+kfold_times <- 160 # number of times to repeat the k-fold CV
 #kfold_k <- 5 # k for k-fold
 bands <- c("blue_mean", "green_mean", "red_mean", "nir_mean")
 
@@ -120,6 +120,63 @@ for (n_iter in 1:orig_sample_iter) {
 
 save(big_list, file = "A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
 
+
+
+# additional runs for 'all data' ------------------------------------------
+
+orig_sample_iter <- 2 # number of times to sample the original data
+orig_sample_frac <- 0.1
+nboot <- 1 # number of bootstrap samples
+rrcv_times <- 1 # number of times to do random repeat CV
+kfold_times <- 1 # number of times to repeat the k-fold CV
+#kfold_k <- 5 # k for k-fold
+bands <- c("blue_mean", "green_mean", "red_mean", "nir_mean")
+
+big_list_alldat <- list()
+
+for (n_iter in 1:orig_sample_iter) {
+  # progress
+  print(paste0("Iteration ", n_iter, " out of ", orig_sample_iter))
+  print(Sys.time())
+  if (n_iter == 1) {start_time <- Sys.time()}
+  if (n_iter > 1) {print(paste0("Finish ~ ", start_time + (((Sys.time() - start_time) / (n_iter-1)) * orig_sample_iter)))}
+  
+  # sample data
+  sample_data <- ecologist_sample(survey_points, orig_sample_frac)
+  
+  # get bootstrap allocations for each parameterisation
+  boot_list <- boot_allocations(nboot, sample_data, bands, survey_points)
+  
+    # get rrcv allocations for each parameterisation
+  rrcv_list <- lapply(X = 1:nrow(rrcv_params), FUN = rrcv_allocations,
+                      rrcv_params, rrcv_times, sample_data, bands, survey_points)
+  names(rrcv_list) <- rrcv_params$name
+  attr(rrcv_list, which = "rrcv_params") <- rrcv_params
+  
+  # get kfold allocations for each parameterisation
+  kfold_list <- lapply(X = 1:nrow(kfold_params), FUN = kfold_allocations,
+                       kfold_params, kfold_times, sample_data, bands, survey_points)
+  names(kfold_list) <- kfold_params$name
+  attr(kfold_list, which = "kfold_params") <- kfold_params
+  
+  # get allocations from trinaing on all data
+  use_all_list <- list()
+  fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, data = sample_data)
+  use_all_list[["all_lda"]] <- predict(fm, newdata = survey_points)$class
+  use_all_list[["all_knn"]] <- knn1(train = sample_data[,bands], test = survey_points[,bands], 
+                                    cl = sample_data$veg_cl_tm)
+  fm <- ranger(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean,
+               data = sample_data, num.trees = 250, mtry = 4)
+  use_all_list[["all_rf"]] <- predict(fm, data = survey_points)$predictions
+  
+  # put into one iterations slot
+  big_list_alldat[[n_iter]] <- list(boot = boot_list,
+                             rrcv = rrcv_list,
+                             kfold = kfold_list,
+                             alldat = use_all_list)
+}
+
+save(big_list_alldat, file = "A:/1_UNSW/0_data/Dharawal_project/big_list_alldat.RData")
 
 # unfinished nonsense -----------------------------------------------------
 

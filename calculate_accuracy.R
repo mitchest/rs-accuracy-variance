@@ -12,6 +12,8 @@ source_lines("calculate_allocations.R", 7:25) # careful!
 
 
 load("A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
+load("A:/1_UNSW/0_data/Dharawal_project/big_list_alldat.RData")
+
 # big_list <- big_list[1]
 # save(big_list, file = "big_list.RData")
 # load("big_list.RData") # temporary so development is more wieldly
@@ -68,8 +70,20 @@ metric_results <- rbindlist(lapply(
   FUN = collect_one_iteration,
   get_this, big_list, survey_points
 ))
-save(metric_results, file="metric_results.RData")
+save(metric_results, file="metric_results_full.RData")
 
+metric_results_alldat <- rbindlist(lapply(
+  X = 1:length(big_list_alldat),
+  FUN = collect_one_iteration,
+  get_this, big_list_alldat, survey_points
+))
+metric_results_alldat <- filter(metric_results_alldat, scenario == "alldat")
+save(metric_results_alldat, file="metric_results_alldat.RData")
+
+load("metric_results_full.RData")
+load("metric_results_alldat.RData")
+metric_results <- rbind(metric_results, metric_results_alldat)
+save(metric_results, file="metric_results.RData")
 
 # main plots --------------------------------------------------------------------
 
@@ -125,6 +139,8 @@ plot_train_test(metric_results_long, "max-likelihood", origins = c("train","test
 plot_train_test(metric_results_long, "max-likelihood", origins = c("train","test"), 
                 metrics = c("bt_prod", "ew_prod", "ttt_prod", "wh_prod"),
                 suffix = "max-lik-producer", scales = "free_x")
+
+plot_train_test(metric_results_long, "max-likelihood", origins = c("all","true","test"))
 
 plot_train_test(metric_results_long, "max-likelihood")
 plot_train_test(metric_results_long, "random-forest")
