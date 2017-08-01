@@ -12,13 +12,18 @@ get_conf_mat <- function(reps, true_id, pred_class, data) {
   # note danger here that it relies on always having at least one case for each class (that is, it relies on the alphabetical factor ordering to ensure confusion matrices are identical in structure)
 }
 
+dim_check <- function(x, len = 4) { # DANGER - hard coded to 4 classes, use len = if error matrix is different size
+  dim(x)[1] != len | dim(x)[2] != len
+}
+
 percentage_agreement <- function(conf_mat) {
   # sum(as.character(data[true_id[[reps]], "veg_cl_tm"]) == as.character(pred_class[[reps]])) / length(pred_class[[reps]])
+  if(dim_check(conf_mat)) {return(NA)}
   sum(diag(conf_mat)) / sum(conf_mat) # xtab method quicker?
 }
 
 cohens_kappa <- function(conf_mat) {
-  if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
+  if(dim_check(conf_mat)) {return(NA)}
   # props <- conf_mat / sum(conf_mat)
   # cor_prob <- sum(diag(props))
   # chance_prob <- sum( apply(props, 1, sum) * apply(props, 2, sum) )
@@ -30,6 +35,7 @@ cohens_kappa <- function(conf_mat) {
 
 # entropy and purity stolen from {IntNMF} package
 entropy <- function(conf_mat) {
+  if(dim_check(conf_mat)) {return(NA)}
   inner_sum <- apply(conf_mat, 1, function(x) {
     c_size <- sum(x)
     sum(x * ifelse(x != 0, log2(x/c_size), 0))
@@ -38,23 +44,38 @@ entropy <- function(conf_mat) {
 }
 
 purity <- function(conf_mat) {
+  if(dim_check(conf_mat)) {return(NA)}
   sum(apply(conf_mat, 1, max)) / sum(conf_mat)
 }
 
 # disagreemetns kind of stolen from {diffeR} package
 disagreement <- function(conf_mat) {
-  if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
+  if(dim_check(conf_mat)) {return(NA)}
   1 - (sum(diag(conf_mat)) / sum(conf_mat))
 }
 
 quantity_disagreement <- function(conf_mat) {
-  if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
+  if(dim_check(conf_mat)) {return(NA)}
   sum(abs(apply(conf_mat, 1, sum) - apply(conf_mat, 2, sum))) / 2 / sum(conf_mat)
 }
 
 allocation_disagreement <- function(conf_mat) {
-  if(dim(conf_mat)[1] != dim(conf_mat)[2]) {return(NA)}
+  if(dim_check(conf_mat)) {return(NA)}
   disagreement(conf_mat) - quantity_disagreement(conf_mat)
+}
+
+producer_accuracy <- function(conf_mat) {
+  if(dim_check(conf_mat)) {return(data.frame(NA,NA,NA,NA))} # DANGER - hard coded to 4 classes
+  ret <- diag(conf_mat) / apply(conf_mat, 1, sum)
+  names(ret) <- paste0(names(ret),"_prod")
+  data.frame(as.list(ret))
+}
+
+user_accuracy <- function(conf_mat) {
+  if(dim_check(conf_mat)) {return(data.frame(NA,NA,NA,NA))} # DANGER - hard coded to 4 classes
+  ret <- diag(conf_mat) / apply(conf_mat, 2, sum)
+  names(ret) <- paste0(names(ret),"_user")
+  data.frame(as.list(ret))
 }
 
 
@@ -75,6 +96,8 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
       true_id,
       iter_n[["boot"]][[get_this$method[this_row]]],
       data)
+    users <- rbindlist(lapply(conf_mat_list, user_accuracy))
+    producers <- rbindlist(lapply(conf_mat_list, producer_accuracy))
     return(
       data.frame(
         perc_agr = unlist(lapply(conf_mat_list, percentage_agreement)),
@@ -83,6 +106,8 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
         purity = unlist(lapply(conf_mat_list, purity)),
         quant_dis = unlist(lapply(conf_mat_list, quantity_disagreement)),
         alloc_dis = unlist(lapply(conf_mat_list, allocation_disagreement)),
+        users, producers,
+        # method info
         type = get_this$type[this_row],
         method = get_this$method[this_row],
         scenario = get_this$scenario[this_row])
@@ -96,6 +121,8 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
       purity = purity(the_conf_mat),
       quant_dis = quantity_disagreement(the_conf_mat),
       alloc_dis = allocation_disagreement(the_conf_mat),
+      user_accuracy(the_conf_mat), producer_accuracy(the_conf_mat),
+      # method info
       type = get_this$type[this_row],
       method = get_this$method[this_row],
       scenario = get_this$scenario[this_row])
@@ -112,6 +139,8 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
       true_id,
       iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]],
       data)
+    users <- rbindlist(lapply(conf_mat_list, user_accuracy))
+    producers <- rbindlist(lapply(conf_mat_list, producer_accuracy))
     return(
       data.frame(
         perc_agr = unlist(lapply(conf_mat_list, percentage_agreement)),
@@ -120,6 +149,8 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
         purity = unlist(lapply(conf_mat_list, purity)),
         quant_dis = unlist(lapply(conf_mat_list, quantity_disagreement)),
         alloc_dis = unlist(lapply(conf_mat_list, allocation_disagreement)),
+        users, producers,
+        # method info
         type = get_this$type[this_row],
         method = get_this$method[this_row],
         scenario = get_this$scenario[this_row])
@@ -154,7 +185,7 @@ plot_train_test <- function(data, model_type,
                             origins = c("all", "train", "test"),
                             structures = c("bootstrap", "random","block", "class", "class-space", "all-data"),
                             metrics = c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis"),
-                            quants = c(0.05,0.5,0.9), suffix = "") {
+                            quants = c(0.05,0.5,0.9), suffix = "", scales = "free") {
   plt <- data %>%
     filter(sample_origin %in% origins,
            sample_structure %in% structures,
@@ -165,6 +196,6 @@ plot_train_test <- function(data, model_type,
     scale_fill_manual("Resampling design", values = c("#969696", "#969696", "#cb181d", "#fc9272", "#31a354")) +
     #scale_colour_manual("Sample type", values = c("#969696", "#fdae6b", "#d94801")) + 
     ylab("Metric value") + xlab("Stratification design") + theme_bw() +
-    facet_grid(metric ~ sample_structure, scales = "free", space = "free", drop = T)
+    facet_grid(metric ~ sample_structure, scales = scales, space = "free", drop = T)
   ggsave(plot = plt, filename = paste0("plots/",model_type,suffix,".pdf"), device = "pdf", width = 20, height = 13)
 }
