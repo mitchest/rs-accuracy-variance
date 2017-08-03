@@ -113,7 +113,7 @@ collect_metric_results <- function(this_row, get_this, iter_n, data) {
         scenario = get_this$scenario[this_row])
     )
   } else if (get_this$type[this_row] == "alldat") {
-    the_conf_mat <- get_conf_mat(1, list(data$id), list(iter_n[["alldat"]][[get_this$method[this_row]]]), data)
+    the_conf_mat <- get_conf_mat(1, list(iter_n[["oob_ids"]]), list(iter_n[["alldat"]][[get_this$method[this_row]]]), data)
     return(data.frame(
       perc_agr = percentage_agreement(the_conf_mat),
       kappa = cohens_kappa(the_conf_mat),

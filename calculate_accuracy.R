@@ -24,42 +24,43 @@ get_this <- rbind(
   data.frame(
     scenario = c(rep("boot", 3),
                  rep("rrcv", 24),
-                 rep("kfold", 12),
-                 "alldat"),
+                 rep("kfold", 12)),
     type = c(rep("boot", 3),
              rep(names(big_list[[1]][["rrcv"]]), each = 3),
-             rep(names(big_list[[1]][["kfold"]]), each = 3),
-             "alldat"),
-    method = c(rep(c("train_lda", "test_lda", "true_lda"), 13), "all_lda"),
-    tt = c(rep(c("train", "test", "true"), 13), "alldat"),
+             rep(names(big_list[[1]][["kfold"]]), each = 3)),
+    method = c(rep(c("train_lda", "test_lda", "true_lda"), 13)),
+    tt = c(rep(c("train", "test", "true"), 13)),
     stringsAsFactors = F),
   # for knn classifier
   data.frame(
     scenario = c(rep("boot", 2),
                  rep("rrcv", 16),
-                 rep("kfold", 8),
-                 "alldat"),
+                 rep("kfold", 8)),
     type = c(rep("boot",2),
              rep(names(big_list[[1]][["rrcv"]]), each = 2),
-             rep(names(big_list[[1]][["kfold"]]), each = 2),
-             "alldat"),
-    method = c(rep(c("test_knn", "true_knn"), 13), "all_knn"),
-    tt = c(rep(c("test", "true"), 13), "alldat"),
+             rep(names(big_list[[1]][["kfold"]]), each = 2)),
+    method = c(rep(c("test_knn", "true_knn"), 13)),
+    tt = c(rep(c("test", "true"), 13)),
     stringsAsFactors = F),
   # for rf classifier
   data.frame(
     scenario = c(rep("boot", 3),
                  rep("rrcv", 24),
-                 rep("kfold", 12),
-                 "alldat"),
+                 rep("kfold", 12)),
     type = c(rep("boot", 3),
              rep(names(big_list[[1]][["rrcv"]]), each = 3),
-             rep(names(big_list[[1]][["kfold"]]), each = 3),
-             "alldat"),
-    method = c(rep(c("train_rf", "test_rf", "true_rf"), 13), "all_rf"),
-    tt = c(rep(c("train", "test", "true"), 13), "alldat"),
+             rep(names(big_list[[1]][["kfold"]]), each = 3)),
+    method = c(rep(c("train_rf", "test_rf", "true_rf"), 13)),
+    tt = c(rep(c("train", "test", "true"), 13)),
     stringsAsFactors = F)
   )
+
+get_this_all <- data.frame(
+  scenario = rep("alldat", 3),
+  type = rep("alldat", 3),
+  method = c("all_lda", "all_knn", "all_rf"),
+  tt = rep("alldat", 3),
+  stringsAsFactors = F)
 
 
 
@@ -75,7 +76,7 @@ save(metric_results, file="metric_results_full.RData")
 metric_results_alldat <- rbindlist(lapply(
   X = 1:length(big_list_alldat),
   FUN = collect_one_iteration,
-  get_this, big_list_alldat, survey_points
+  get_this_all, big_list_alldat, survey_points
 ))
 metric_results_alldat <- filter(metric_results_alldat, scenario == "alldat")
 save(metric_results_alldat, file="metric_results_alldat.RData")
@@ -132,15 +133,14 @@ metric_results_long <- metric_results %>%
 
 
 # main plots
-plot_train_test(metric_results_long, "max-likelihood", origins = c("train","test"))
-plot_train_test(metric_results_long, "max-likelihood", origins = c("train","test"), 
+plot_train_test(metric_results_long, "max-likelihood", origins = c("all","true","test"))
+
+plot_train_test(metric_results_long, "max-likelihood", origins = c("all", "train","test"), 
                 metrics = c("perc_agr", "bt_user", "ew_user", "ttt_user", "wh_user"),
                 suffix = "max-lik-user", scales = "free_x")
-plot_train_test(metric_results_long, "max-likelihood", origins = c("train","test"), 
-                metrics = c("bt_prod", "ew_prod", "ttt_prod", "wh_prod"),
+plot_train_test(metric_results_long, "max-likelihood", origins = c("all", "train","test"), 
+                metrics = c("perc_agr", "bt_prod", "ew_prod", "ttt_prod", "wh_prod"),
                 suffix = "max-lik-producer", scales = "free_x")
-
-plot_train_test(metric_results_long, "max-likelihood", origins = c("all","true","test"))
 
 plot_train_test(metric_results_long, "max-likelihood")
 plot_train_test(metric_results_long, "random-forest")
