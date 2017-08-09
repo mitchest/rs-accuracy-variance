@@ -110,7 +110,7 @@ get_rf_allocation <- function(x, data, train_list, test_list, all_data) {
 
 boot_allocations <- function(nboot, data, bands, all_data) {
   boot_method <- list()
-  boot_method[["train"]] <- replicate(n = nboot, expr = {sample(sample_data$id, replace = T)}, simplify = F)
+  boot_method[["train"]] <- replicate(n = nboot, expr = {sample(data$id, replace = T)}, simplify = F)
   boot_method[["test"]] <- lapply(X = boot_method[["train"]], FUN = get_test_from_trains, data$id)
   # mle classifications
   boot_lda <- lapply(X = 1:nboot, FUN = get_lda_allocation,
