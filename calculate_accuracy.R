@@ -131,27 +131,52 @@ metric_results_long <- metric_results %>%
                                             "bt_prod", "ew_prod", "ttt_prod", "wh_prod"))) %>%
   filter(!is.na(value))
 
+metric_results_long$class <- NA
+metric_results_long$class[grep("bt", metric_results_long$metric)] <- "Banksia"
+metric_results_long$class[grep("ew", metric_results_long$metric)] <- "Eucalypt"
+metric_results_long$class[grep("ttt", metric_results_long$metric)] <- "Tea-tree"
+metric_results_long$class[grep("wh", metric_results_long$metric)] <- "Wet-heath"
+metric_results_long$class <- factor(metric_results_long$class,
+                                    levels = c("Banksia","Eucalypt","Tea-tree","Wet-heath"))
+
+metric_results_long$user_prod <- NA
+metric_results_long$user_prod[grep("user", metric_results_long$metric)] <- "user"
+metric_results_long$user_prod[grep("prod", metric_results_long$metric)] <- "producer"
+metric_results_long$user_prod <- factor(metric_results_long$user_prod,
+                                    levels = c("user","producer"))
 
 # main plots
-plot_train_test(metric_results_long, "max-likelihood", origins = c("all","true","test"))
+plot_by_structure(metric_results_long, "max-likelihood", origins = c("test"), suffix = "-test")
 
-plot_train_test(metric_results_long, "max-likelihood", origins = c("all", "train","test"), 
-                metrics = c("perc_agr", "bt_user", "ew_user", "ttt_user", "wh_user"),
-                suffix = "max-lik-user", scales = "free_x")
-plot_train_test(metric_results_long, "max-likelihood", origins = c("all", "train","test"), 
-                metrics = c("perc_agr", "bt_prod", "ew_prod", "ttt_prod", "wh_prod"),
-                suffix = "max-lik-producer", scales = "free_x")
+plot_by_structure(metric_results_long, "max-likelihood", origins = c("train", "test", "true"))
+plot_by_structure(metric_results_long, "random-forest", origins = c("train", "test", "true"))
+plot_by_structure(metric_results_long, "nearest-n", origins = c("train", "test", "true"))
 
-plot_train_test(metric_results_long, "max-likelihood")
-plot_train_test(metric_results_long, "random-forest")
-plot_train_test(metric_results_long, "nearest-n")
+plot_by_model(metric_results_long, c("max-likelihood","random-forest", "nearest-n"), origins = c("test"), suffix = "ml-nn-rf-test")
 
-# additonal plots
-plot_train_test(metric_results_long, origins = c("all", "train", "test", "true"), model_type = "max-likelihood",
-                structures = c("bootstrap", "random","block", "class", "class-space", "all-data"), suffix = "_true")
+plot_user_prod(metric_results_long, c("max-likelihood"), suffix = "ml-user-prod-test")
+plot_user_prod(metric_results_long, c("max-likelihood"), origins = c("train"), suffix = "ml-user-prod-train")
+# plot_user_prod(metric_results_long, c("max-likelihood"), origins = c("true"), suffix = "ml-true-user-prod")
+
+plot_by_structure(metric_results_long, "max-likelihood", origins = c("true", "train","test"),
+                  metrics = c("bt_user", "ew_user", "ttt_user", "wh_user"),
+                  suffix = "-user", scales = "free_x")
+plot_by_structure(metric_results_long, "max-likelihood", origins = c("true", "train","test"),
+                  metrics = c("bt_prod", "ew_prod", "ttt_prod", "wh_prod"),
+                  suffix = "-producer", scales = "free_x")
+
+plot_by_structure(metric_results_long, "max-likelihood", origins = c("train","test","true"))
+
+# plot_by_structure(metric_results_long, "random-forest", origins = c("all", "true","test"),
+#                 metrics = c("perc_agr", "bt_user", "ew_user", "ttt_user", "wh_user"),
+#                 suffix = "-user", scales = "free_x")
+# plot_by_structure(metric_results_long, "random-forest", origins = c("all", "true","test"),
+#                 metrics = c("perc_agr", "bt_prod", "ew_prod", "ttt_prod", "wh_prod"),
+#                 suffix = "-producer", scales = "free_x")
+
 
 mle_train_test_iters <- metric_results_long %>%
-  filter(sample_origin %in% c("train", "test"),
+  filter(sample_origin %in% c("true", "test"),
     #sample_fraction %in% c("all-data", "67-33", "5-fold"),
     metric == "perc_agr",
     iter_n %in% c(1,4,13,19), 
@@ -163,28 +188,37 @@ mle_train_test_iters <- metric_results_long %>%
   #scale_colour_manual("Sample type", values = c("#969696", "#fdae6b", "#d94801")) + 
   ylab("Metric value") + xlab("Stratification design") +
   theme_bw() +
-  facet_grid(iter_n ~ sample_origin, scales = "free", space = "free", drop = T)
+  facet_grid(iter_n ~ sample_origin, scales = "free_x", space = "free", drop = T)
 ggsave("plots/max-likelihood_iters.pdf", plot = mle_train_test_iters, device = "pdf", width = 20, height = 13)
 
+mle_iter_cummean <- metric_results_long %>%
+  filter(iter_n == 1, model == "max-likelihood", sample_structure != "all-data", metric == "perc_agr", sample_origin == "test") %>%
+  select(sample_structure, sample_fraction, value) %>%
+  group_by(sample_structure, sample_fraction) %>%
+  mutate(iterations = 1:n(), cum_med = cummean(value), scenario = paste0(sample_structure,"_",sample_fraction)) %>%
+  ggplot(., aes(y = cum_med, x = iterations)) +
+  geom_line(aes(colour = scenario)) +
+  ylab("Percentage agreement") + xlab("Number of iterations") + theme_bw()
+ggsave("plots/mle_perc-agr_efficiency.pdf", plot = mle_iter_cummean, device = "pdf", width = 12, height = 8)
 
-load("metric_results_long_reps.RData")
-metric_results_long_reps$reps <- factor(metric_results_long_reps$reps,
-                                        levels = c("5-reps","50-reps","100-reps"))
-metric_results_long_reps$sample_origin <- factor(as.character(metric_results_long_reps$sample_origin),
-                                                 levels = c("true", "train", "test", "all"))
-mle_percagr_reps <- metric_results_long_reps %>%
-  filter(sample_origin %in% c("all", "train", "test"),
-    #sample_fraction %in% c("all-data", "67-33", "5-fold"),
-    model == "max-likelihood",
-    metric == "perc_agr") %>%
-  ggplot(., aes(y = value)) +
-  geom_boxplot(aes(x = sample_structure, fill = sample_fraction), outlier.size = 0.25, lwd=0.25) +
-  scale_fill_manual("Resampling design", values = c("#969696", "#969696", "#cb181d", "#fc9272", "#31a354")) +
-  #scale_colour_manual("Sample type", values = c("#969696", "#fdae6b", "#d94801")) + 
-  ylab("Metric value") + xlab("Stratification design") +
-  theme_bw() +
-  facet_grid(reps ~ sample_origin, scales = "free", space = "free", drop = T)
-ggsave("plots/mle_perc-agr_efficiency.pdf", plot = mle_percagr_reps, device = "pdf", width = 20, height = 13)
+# load("metric_results_long_reps.RData")
+# metric_results_long_reps$reps <- factor(metric_results_long_reps$reps,
+#                                         levels = c("5-reps","50-reps","100-reps"))
+# metric_results_long_reps$sample_origin <- factor(as.character(metric_results_long_reps$sample_origin),
+#                                                  levels = c("true", "train", "test", "all"))
+# mle_percagr_reps <- metric_results_long_reps %>%
+#   filter(sample_origin %in% c("all", "train", "test"),
+#     #sample_fraction %in% c("all-data", "67-33", "5-fold"),
+#     model == "max-likelihood",
+#     metric == "perc_agr") %>%
+#   ggplot(., aes(y = value)) +
+#   geom_boxplot(aes(x = sample_structure, fill = sample_fraction), outlier.size = 0.25, lwd=0.25) +
+#   scale_fill_manual("Resampling design", values = c("#969696", "#969696", "#cb181d", "#fc9272", "#31a354")) +
+#   #scale_colour_manual("Sample type", values = c("#969696", "#fdae6b", "#d94801")) + 
+#   ylab("Metric value") + xlab("Stratification design") +
+#   theme_bw() +
+#   facet_grid(reps ~ sample_origin, scales = "free", space = "free", drop = T)
+# ggsave("plots/mle_perc-agr_efficiency.pdf", plot = mle_percagr_reps, device = "pdf", width = 20, height = 13)
 
 
 
@@ -192,14 +226,16 @@ ggsave("plots/mle_perc-agr_efficiency.pdf", plot = mle_percagr_reps, device = "p
 
 
 # looks at mean/CI/min-max summaries
-metric_stats <- metric_results %>%
-  group_by(type, method) %>%
-  summarise(mean = mean(perc_agr),
-            median = median(perc_agr),
-            upper = quantile(perc_agr, 0.975),
-            lower = quantile(perc_agr, 0.025),
-            max = max(perc_agr),
-            min = min(perc_agr))
+metric_stats <- metric_results_long %>%
+  group_by(model, sample_structure, sample_fraction, sample_origin, metric) %>%
+  summarise(mean = mean(value),
+            median = median(value),
+            upper = quantile(value, 0.95),
+            lower = quantile(value, 0.05),
+            max = max(value),
+            min = min(value)) %>%
+  mutate_at(vars(mean:min), funs(round(.,3)))
+
 
 
 

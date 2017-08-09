@@ -181,7 +181,7 @@ plot_pa_results <- function(x, data) {
     scale_colour_manual(values = c("#252525", "#e31a1c", "#3f007d"))
 }
 
-plot_train_test <- function(data, model_type, 
+plot_by_structure <- function(data, model_type, 
                             origins = c("all", "train", "test"),
                             structures = c("bootstrap", "random","block", "class", "class-space", "all-data"),
                             metrics = c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis"),
@@ -193,9 +193,51 @@ plot_train_test <- function(data, model_type,
            metric %in% metrics) %>%
     ggplot(., aes(y = value)) +
     geom_violin(aes(x = sample_origin, fill = sample_fraction), scale = "area", draw_quantiles = quants, lwd=0.25) +
-    scale_fill_manual("Resampling design", values = c("#969696", "#969696", "#cb181d", "#fc9272", "#31a354")) +
+    scale_fill_manual("Resampling design", values = c("#969696", "#cb181d", "#fc9272", "#31a354")) +
     #scale_colour_manual("Sample type", values = c("#969696", "#fdae6b", "#d94801")) + 
-    ylab("Metric value") + xlab("Stratification design") + theme_bw() +
+    ylab("Accuracy metric value") + xlab("Stratification design") + ggtitle("Accuracy results by resampling and stratification design") +
+    theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +
     facet_grid(metric ~ sample_structure, scales = scales, space = "free", drop = T)
   ggsave(plot = plt, filename = paste0("plots/",model_type,suffix,".pdf"), device = "pdf", width = 20, height = 13)
+}
+
+plot_by_model <- function(data, model_type, 
+                              origins = c("all", "train", "test"),
+                              structures = c("bootstrap", "random","block", "class", "class-space", "all-data"),
+                              metrics = c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis"),
+                              quants = c(0.05,0.5,0.9), suffix = "", scales = "free") {
+  plt <- data %>%
+    filter(sample_origin %in% origins,
+           sample_structure %in% structures,
+           model %in% model_type,
+           metric %in% metrics) %>%
+    ggplot(., aes(y = value)) +
+    geom_violin(aes(x = model, fill = sample_fraction), scale = "area", draw_quantiles = quants, lwd=0.25) +
+    scale_fill_manual("Resampling design", values = c("#969696", "#cb181d", "#fc9272", "#31a354")) +
+    #scale_colour_manual("Sample type", values = c("#969696", "#fdae6b", "#d94801")) + 
+    ylab("Accuracy metric value") + xlab("Model type") + ggtitle("Accuracy results by resampling and stratification design") + 
+    facet_grid(metric ~ sample_structure, scales = scales, space = "free", drop = T) + 
+    theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+  ggsave(plot = plt, filename = paste0("plots/",suffix,".pdf"), device = "pdf", width = 20, height = 13)
+}
+
+plot_user_prod <- function(data, model_type, 
+                          origins = c("test"),
+                          structures = c("bootstrap", "random","block", "class", "class-space"),
+                          metrics = c("perc_agr", "bt_user", "ew_user", "ttt_user", "wh_user","perc_agr", "bt_prod", "ew_prod", "ttt_prod", "wh_prod"),
+                          quants = c(0.05,0.5,0.9), suffix = "", scales = "free_x") {
+  plt <- data %>%
+    na.omit() %>%
+    filter(sample_origin %in% origins,
+           sample_structure %in% structures,
+           model %in% model_type,
+           metric %in% metrics) %>%
+    ggplot(., aes(y = value)) +
+    geom_violin(aes(x = user_prod, fill = sample_fraction), scale = "width", draw_quantiles = quants, lwd=0.25) +
+    scale_fill_manual("Resampling design", values = c("#969696", "#cb181d", "#fc9272", "#31a354")) +
+    #scale_colour_manual("Sample type", values = c("#969696", "#fdae6b", "#d94801")) + 
+    ylab("Accuracy metric value") + xlab("Accuracy type") + ggtitle("Vegetation class accuracy results by resampling and stratification design") + 
+    facet_grid(class ~ sample_structure, scales = scales, space = "free", drop = T) + 
+    theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+  ggsave(plot = plt, filename = paste0("plots/",suffix,".pdf"), device = "pdf", width = 20, height = 13)
 }
