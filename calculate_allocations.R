@@ -47,7 +47,7 @@ kfold_params <- data.frame(kfold_k = rep(5, 4),
 # run models and allocate samples -----------------------------------------
 
 
-# run overall sampling as a for loop - allows cluster implementation more easily
+# run overall sampling as a for loop - allows cluster implementation more easily (if required)
 
 big_list <- list()
 
