@@ -9,7 +9,7 @@ source("allocation_functions.R")
 
 # load data ---------------------------------------------------------------
 
-survey_points_raw <- read.csv("classification_data/dharawal_points_ads40.csv",
+survey_points_raw <- read.csv("classification_data/observer_class_ads40.csv",
                           header = T, stringsAsFactors = F)
 
 
