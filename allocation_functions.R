@@ -101,7 +101,7 @@ get_rf_allocation <- function(x, data, train_list, test_list, all_data) {
   train <- train_list[[x]]
   test <- test_list[[x]]
   fm <- ranger(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, # move to character argvar input
-            data = inner_join(data, data.frame(id=train), by="id"), num.trees = 250, mtry = 4)
+            data = inner_join(data, data.frame(id=train), by="id"), num.trees = 250, mtry = 2)
   train_preds <- fm$predictions
   test_preds <- predict(fm, data = inner_join(data, data.frame(id=test), by="id"))$predictions
   true_preds <- predict(fm, data = all_data)$predictions
