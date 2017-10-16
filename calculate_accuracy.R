@@ -96,8 +96,8 @@ load("metric_results.RData")
 metric_results$sample_origin <- NA
 metric_results$sample_origin[grep("test", metric_results$method)] <- "test"
 metric_results$sample_origin[grep("train", metric_results$method)] <- "train"
-#metric_results$sample_origin[grep("true", metric_results$method)] <- "true"
-metric_results$sample_origin[grep("all", metric_results$method)] <- "all"
+metric_results$sample_origin[grep("true", metric_results$method)] <- "true"
+#metric_results$sample_origin[grep("all", metric_results$method)] <- "all"
 # metric_results$sample_origin <- factor(metric_results$sample_origin, 
 #                                        levels = c("true", "train", "test", "all"))
 metric_results$sample_origin <- factor(metric_results$sample_origin, 
