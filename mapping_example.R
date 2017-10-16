@@ -13,14 +13,14 @@ library(dplyr)
 # load data ---------------------------------------------------------------
 
 # load survey data
-survey_points_raw <- read.csv("classification_data/dharawal_points_ads40.csv",
+survey_points_raw <- read.csv("classification_data/observer_class_ads40.csv",
                               header = T, stringsAsFactors = F)
 
 survey_points <- survey_points_raw %>%
-  filter(veg_cl_tm %in% c("bt", "ew", "ttt", "wh"),
-         studyarea_ %in% c(12,10)) %>%
-  select(studyarea_, veg_cl_tm, blue_mean:nir_mean) %>%
-  mutate(veg_cl_tm = as.factor(veg_cl_tm),
+  filter(veg_class %in% c("bt", "ew", "ttt", "wh"),
+         study_area %in% c(12,10)) %>%
+  select(study_area, veg_class, blue_mean:nir_mean) %>%
+  mutate(veg_class = as.factor(veg_class),
          id = 1:nrow(.)) %>%
   na.omit()
 
@@ -60,13 +60,13 @@ fit_and_map <- function(niter, data, image_data) {
   # get test from left overs
   test <- data$id[!data$id %in% train]
   # fit ML model to training data
-  fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean,
+  fm <- lda(veg_class ~ blue_mean + green_mean + red_mean + nir_mean,
             data = inner_join(data, data.frame(id=train), by="id"),
-            prior = rep(1/length(unique(data$veg_cl_tm)), length(unique(data$veg_cl_tm))))
+            prior = rep(1/length(unique(data$veg_class)), length(unique(data$veg_class))))
   # predict classes for test data
   test_preds <- predict(fm, newdata = inner_join(data, data.frame(id=test), by="id"))$class
   # get percentage agreement accuracy
-  perc_agr <- sum(as.character(test_preds) == as.character(data$veg_cl_tm[test])) / length(test_preds)
+  perc_agr <- sum(as.character(test_preds) == as.character(data$veg_class[test])) / length(test_preds)
   # predict classes for image data
   # this is possibly a very slow way to do raster predictions - investigate other options for serious use
   image_preds <- predict(fm, newdata = image_data)$class
