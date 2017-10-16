@@ -8,7 +8,7 @@ source_lines <- function(file, lines){
 
 get_conf_mat <- function(reps, true_id, pred_class, data) {
   table(as.character(pred_class[[reps]]),
-        as.character(data[true_id[[reps]], "veg_cl_tm"]))
+        as.character(data[true_id[[reps]], "veg_class"]))
   # note danger here that it relies on always having at least one case for each class (that is, it relies on the alphabetical factor ordering to ensure confusion matrices are identical in structure)
 }
 
@@ -17,7 +17,7 @@ dim_check <- function(x, len = 4) { # DANGER - hard coded to 4 classes, use len 
 }
 
 percentage_agreement <- function(conf_mat) {
-  # sum(as.character(data[true_id[[reps]], "veg_cl_tm"]) == as.character(pred_class[[reps]])) / length(pred_class[[reps]])
+  # sum(as.character(data[true_id[[reps]], "veg_class"]) == as.character(pred_class[[reps]])) / length(pred_class[[reps]])
   if(dim_check(conf_mat)) {return(NA)}
   sum(diag(conf_mat)) / sum(conf_mat) # xtab method quicker?
 }
