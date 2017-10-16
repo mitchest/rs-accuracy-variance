@@ -121,7 +121,6 @@ get_rf_allocation <- function(x, data, train_list, test_list, all_data, image_da
     return(list(train_preds, test_preds, true_preds, image_preds))
   }
   list(train_preds, test_preds, true_preds)
-  list(train_preds, test_preds, true_preds)
 }
 
 boot_allocations <- function(nboot, data, bands, all_data, image_data, n_iter) {
