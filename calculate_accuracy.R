@@ -7,7 +7,7 @@ library(tidyr)
 source("accuracy_functions.R")
 
 # get same data as used for allocations
-source_lines("calculate_allocations.R", 7:25) # careful!
+source_lines("calculate_allocations.R", 7:26) # careful!
 #rm(survey_points_raw)
 
 

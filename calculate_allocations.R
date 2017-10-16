@@ -12,6 +12,7 @@ source("allocation_functions.R")
 survey_points_raw <- read.csv("classification_data/observer_class_ads40.csv",
                           header = T, stringsAsFactors = F)
 
+load("classification_data/image_data.RData") # pre-made df with image data (quickes/easiest option here) - it is BIG, literally a data frame with squillions of rows (i.e. pixels)
 
 
 # data prep ---------------------------------------------------------------
@@ -28,11 +29,11 @@ rm(survey_points_raw)
 
 # parameterise analysis ---------------------------------------------------
 
-orig_sample_iter <- 50 # number of times to sample the original data
+orig_sample_iter <- 1 # number of times to sample the original data
 orig_sample_frac <- 0.1
-nboot <- 800 # number of bootstrap samples
-rrcv_times <- 800 # number of times to do random repeat CV
-kfold_times <- 160 # number of times to repeat the k-fold CV
+nboot <- 5 # number of bootstrap samples
+rrcv_times <- 5 # number of times to do random repeat CV
+kfold_times <- 1 # number of times to repeat the k-fold CV
 #kfold_k <- 5 # k for k-fold
 bands <- c("blue_mean", "green_mean", "red_mean", "nir_mean")
 
@@ -55,14 +56,14 @@ for (n_iter in 1:orig_sample_iter) {
   # progress
   print(paste0("Iteration ", n_iter, " out of ", orig_sample_iter))
   print(Sys.time())
-  if (n_iter == 1) {start_time <- Sys.time()}
-  if (n_iter > 1) {print(paste0("Finish ~ ", start_time + (((Sys.time() - start_time) / (n_iter-1)) * orig_sample_iter)))}
+  if (n_iter == 2) {start_time <- Sys.time()}
+  if (n_iter > 2) {print(paste0("Finish ~ ", start_time + (((Sys.time() - start_time) / (n_iter-2)) * (orig_sample_iter-1))))}
   
   # sample data
   sample_data <- ecologist_sample(survey_points, orig_sample_frac)
   
   # get bootstrap allocations for each parameterisation
-  boot_list <- boot_allocations(nboot, sample_data, bands, survey_points)
+  boot_list <- boot_allocations(nboot, sample_data, bands, survey_points, image_data, n_iter)
   
   # NOTE ######################################################################################
   # This code block samples BOTH training AND test subsets using bootstrapping with replacement
@@ -91,13 +92,13 @@ for (n_iter in 1:orig_sample_iter) {
   
   # get rrcv allocations for each parameterisation
   rrcv_list <- lapply(X = 1:nrow(rrcv_params), FUN = rrcv_allocations,
-                      rrcv_params, rrcv_times, sample_data, bands, survey_points)
+                      rrcv_params, rrcv_times, sample_data, bands, survey_points, image_data, n_iter)
   names(rrcv_list) <- rrcv_params$name
   attr(rrcv_list, which = "rrcv_params") <- rrcv_params
   
   # get kfold allocations for each parameterisation
   kfold_list <- lapply(X = 1:nrow(kfold_params), FUN = kfold_allocations,
-                       kfold_params, kfold_times, sample_data, bands, survey_points)
+                       kfold_params, kfold_times, sample_data, bands, survey_points, image_data, n_iter)
   names(kfold_list) <- kfold_params$name
   attr(kfold_list, which = "kfold_params") <- kfold_params
   
