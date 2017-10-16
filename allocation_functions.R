@@ -87,15 +87,15 @@ get_lda_allocation <- function(x, data, train_list, test_list, all_data) {
   list(train_preds, test_preds, true_preds)
 }
 
-get_knn_allocation <- function(x, data, train_list, test_list, bands, all_data) {
-  train <- train_list[[x]]
-  test <- test_list[[x]]
-  train_dat <- inner_join(data, data.frame(id=train), by="id")
-  test_dat <- inner_join(data, data.frame(id=test), by="id")
-  test_preds <- knn1(train = train_dat[,bands], test = test_dat[,bands], cl = train_dat$veg_cl_tm)
-  true_preds <- knn1(train = train_dat[,bands], test = all_data[,bands], cl = train_dat$veg_cl_tm)
-  list(test_preds, true_preds)
-}
+# get_knn_allocation <- function(x, data, train_list, test_list, bands, all_data) {
+#   train <- train_list[[x]]
+#   test <- test_list[[x]]
+#   train_dat <- inner_join(data, data.frame(id=train), by="id")
+#   test_dat <- inner_join(data, data.frame(id=test), by="id")
+#   test_preds <- knn1(train = train_dat[,bands], test = test_dat[,bands], cl = train_dat$veg_cl_tm)
+#   true_preds <- knn1(train = train_dat[,bands], test = all_data[,bands], cl = train_dat$veg_cl_tm)
+#   list(test_preds, true_preds)
+# }
 
 get_rf_allocation <- function(x, data, train_list, test_list, all_data) {
   train <- train_list[[x]]
@@ -118,11 +118,11 @@ boot_allocations <- function(nboot, data, bands, all_data) {
   boot_method[["train_lda"]] <- lapply(boot_lda, `[[`, 1)
   boot_method[["test_lda"]] <- lapply(boot_lda, `[[`, 2)
   boot_method[["true_lda"]] <- lapply(boot_lda, `[[`, 3)
-  # knn classifications
-  boot_knn <- lapply(X = 1:nboot, FUN = get_knn_allocation,
-                     data, boot_method[["train"]], boot_method[["test"]], bands, all_data)
-  boot_method[["test_knn"]] <- lapply(boot_knn, `[[`, 1)
-  boot_method[["true_knn"]] <- lapply(boot_knn, `[[`, 2)
+  # # knn classifications
+  # boot_knn <- lapply(X = 1:nboot, FUN = get_knn_allocation,
+  #                    data, boot_method[["train"]], boot_method[["test"]], bands, all_data)
+  # boot_method[["test_knn"]] <- lapply(boot_knn, `[[`, 1)
+  # boot_method[["true_knn"]] <- lapply(boot_knn, `[[`, 2)
   # rf classifications
   boot_rf <- lapply(X = 1:nboot, FUN = get_rf_allocation,
                     data, boot_method[["train"]], boot_method[["test"]], all_data)
@@ -146,11 +146,11 @@ rrcv_allocations <- function(x, rrcv_params, rrcv_times, data, bands, all_data) 
   rrcv_method[["train_lda"]] <- lapply(rrcv_lda, `[[`, 1)
   rrcv_method[["test_lda"]] <- lapply(rrcv_lda, `[[`, 2)
   rrcv_method[["true_lda"]] <- lapply(rrcv_lda, `[[`, 3)
-  # knn classifications
-  rrcv_knn <- lapply(X = 1:rrcv_times, FUN = get_knn_allocation,
-                                      data, rrcv_method[["train"]], rrcv_method[["test"]], bands, all_data)
-  rrcv_method[["test_knn"]] <- lapply(rrcv_knn, `[[`, 1)
-  rrcv_method[["true_knn"]] <- lapply(rrcv_knn, `[[`, 2)
+  # # knn classifications
+  # rrcv_knn <- lapply(X = 1:rrcv_times, FUN = get_knn_allocation,
+  #                                     data, rrcv_method[["train"]], rrcv_method[["test"]], bands, all_data)
+  # rrcv_method[["test_knn"]] <- lapply(rrcv_knn, `[[`, 1)
+  # rrcv_method[["true_knn"]] <- lapply(rrcv_knn, `[[`, 2)
   # rf classifications
   rrcv_rf <- lapply(X = 1:rrcv_times, FUN = get_rf_allocation,
                      data, rrcv_method[["train"]], rrcv_method[["test"]], all_data)
@@ -174,11 +174,11 @@ kfold_allocations <- function(x, kfold_params, kfold_times, data, bands, all_dat
   kfold_method[["train_lda"]] <- lapply(kfold_lda, `[[`, 1)
   kfold_method[["test_lda"]] <- lapply(kfold_lda, `[[`, 2)
   kfold_method[["true_lda"]] <- lapply(kfold_lda, `[[`, 3)
-  # knn classifications
-  kfold_knn <- lapply(X = 1:(kfold_times*kfold_k), FUN = get_knn_allocation,
-                                       data, kfold_method[["train"]], kfold_method[["test"]], bands, all_data)
-  kfold_method[["test_knn"]] <- lapply(kfold_knn, `[[`, 1)
-  kfold_method[["true_knn"]] <- lapply(kfold_knn, `[[`, 2)
+  # # knn classifications
+  # kfold_knn <- lapply(X = 1:(kfold_times*kfold_k), FUN = get_knn_allocation,
+  #                                      data, kfold_method[["train"]], kfold_method[["test"]], bands, all_data)
+  # kfold_method[["test_knn"]] <- lapply(kfold_knn, `[[`, 1)
+  # kfold_method[["true_knn"]] <- lapply(kfold_knn, `[[`, 2)
   # rf classifications
   kfold_rf <- lapply(X = 1:(kfold_times*kfold_k), FUN = get_rf_allocation,
                       data, kfold_method[["train"]], kfold_method[["test"]], all_data)

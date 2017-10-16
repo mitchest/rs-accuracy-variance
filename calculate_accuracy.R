@@ -12,11 +12,11 @@ source_lines("calculate_allocations.R", 7:25) # careful!
 
 
 load("A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
-load("A:/1_UNSW/0_data/Dharawal_project/big_list_alldat.RData")
+#load("A:/1_UNSW/0_data/Dharawal_project/big_list_alldat.RData")
 
-# big_list <- big_list[1]
-# save(big_list, file = "big_list.RData")
-# load("big_list.RData") # temporary so development is more wieldly
+#big_list <- big_list[1]
+#save(big_list, file = "big_list.RData")
+#load("big_list.RData") # temporary so development is more wieldly
 
 # decide what results to extract - be VERY careful, and examine the data frame well
 get_this <- rbind(
@@ -73,17 +73,17 @@ metric_results <- rbindlist(lapply(
 ))
 save(metric_results, file="metric_results_full.RData")
 
-metric_results_alldat <- rbindlist(lapply(
-  X = 1:length(big_list_alldat),
-  FUN = collect_one_iteration,
-  get_this_all, big_list_alldat, survey_points
-))
-metric_results_alldat <- filter(metric_results_alldat, scenario == "alldat")
-save(metric_results_alldat, file="metric_results_alldat.RData")
+# metric_results_alldat <- rbindlist(lapply(
+#   X = 1:length(big_list_alldat),
+#   FUN = collect_one_iteration,
+#   get_this_all, big_list_alldat, survey_points
+# ))
+# metric_results_alldat <- filter(metric_results_alldat, scenario == "alldat")
+# save(metric_results_alldat, file="metric_results_alldat.RData")
 
 load("metric_results_full.RData")
-load("metric_results_alldat.RData")
-metric_results <- rbind(metric_results, metric_results_alldat)
+#load("metric_results_alldat.RData")
+#metric_results <- rbind(metric_results, metric_results_alldat)
 save(metric_results, file="metric_results.RData")
 
 
@@ -96,10 +96,12 @@ load("metric_results.RData")
 metric_results$sample_origin <- NA
 metric_results$sample_origin[grep("test", metric_results$method)] <- "test"
 metric_results$sample_origin[grep("train", metric_results$method)] <- "train"
-metric_results$sample_origin[grep("true", metric_results$method)] <- "true"
+#metric_results$sample_origin[grep("true", metric_results$method)] <- "true"
 metric_results$sample_origin[grep("all", metric_results$method)] <- "all"
+# metric_results$sample_origin <- factor(metric_results$sample_origin, 
+#                                        levels = c("true", "train", "test", "all"))
 metric_results$sample_origin <- factor(metric_results$sample_origin, 
-                                       levels = c("true", "train", "test", "all"))
+                                       levels = c("true", "train", "test"))
 
 metric_results$sample_structure <- NA
 metric_results$sample_structure[grep("boot", metric_results$type)] <- "bootstrap"
@@ -107,18 +109,22 @@ metric_results$sample_structure[grep("type1", metric_results$type)] <- "random"
 metric_results$sample_structure[grep("type2", metric_results$type)] <- "class"
 metric_results$sample_structure[grep("type3", metric_results$type)] <- "class-space"
 metric_results$sample_structure[grep("type4", metric_results$type)] <- "block"
-metric_results$sample_structure[grep("alldat", metric_results$type)] <- "all-data"
+#metric_results$sample_structure[grep("alldat", metric_results$type)] <- "all-data"
+# metric_results$sample_structure <- factor(metric_results$sample_structure,
+#                                           levels = c("bootstrap", "random", "block", "class", "class-space", "all-data"))
 metric_results$sample_structure <- factor(metric_results$sample_structure,
-                                          levels = c("bootstrap", "random", "block", "class", "class-space", "all-data"))
+                                          levels = c("bootstrap", "random", "block", "class", "class-space"))
 
 metric_results$sample_fraction <- NA
 metric_results$sample_fraction[grep("boot", metric_results$type)] <- "bootstrap"
 metric_results$sample_fraction[grep("67", metric_results$type)] <- "67-33"
 metric_results$sample_fraction[grep("80", metric_results$type)] <- "80-20"
 metric_results$sample_fraction[grep("k5", metric_results$type)] <- "5-fold"
-metric_results$sample_fraction[grep("alldat", metric_results$type)] <- "all-data"
+#metric_results$sample_fraction[grep("alldat", metric_results$type)] <- "all-data"
+# metric_results$sample_fraction <- factor(metric_results$sample_fraction,
+#                                           levels = c("all-data", "bootstrap", "67-33", "80-20", "5-fold"))
 metric_results$sample_fraction <- factor(metric_results$sample_fraction,
-                                          levels = c("all-data", "bootstrap", "67-33", "80-20", "5-fold"))
+                                         levels = c("bootstrap", "67-33", "80-20", "5-fold"))
 
 metric_results$model <- NA
 metric_results$model[grep("lda", metric_results$method)] <- "max-likelihood"

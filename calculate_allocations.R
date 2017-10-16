@@ -122,42 +122,48 @@ save(big_list, file = "A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
 
 
 # additional runs for 'all data' ------------------------------------------
-rm(big_list)
 
-orig_sample_iter <- 800 # number of times to sample the original data
-orig_sample_frac <- 0.1
+# NOTE ########################################################################################
+# This code calculates accuracy for models fit to full sub-sample - not used in the publication
+# Also note the corresponding commented code in caclulate_accuracy.R
+###############################################################################################
 
-bands <- c("blue_mean", "green_mean", "red_mean", "nir_mean")
-
-big_list_alldat <- list()
-
-for (n_iter in 1:orig_sample_iter) {
-  # progress
-  print(paste0("Iteration ", n_iter, " out of ", orig_sample_iter))
-  print(Sys.time())
-  if (n_iter == 1) {start_time <- Sys.time()}
-  if (n_iter > 1) {print(paste0("Finish ~ ", start_time + (((Sys.time() - start_time) / (n_iter-1)) * orig_sample_iter)))}
-  
-  # sample data
-  sample_data <- ecologist_sample(survey_points, orig_sample_frac)
-  oob_ids <- survey_points$id[-sample_data$id]
-  
-  # get allocations from training on all data
-  use_all_list <- list()
-  fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, data = sample_data)
-  use_all_list[["all_lda"]] <- predict(fm, newdata = survey_points[oob_ids,])$class
-  use_all_list[["all_knn"]] <- knn1(train = sample_data[,bands], test = survey_points[oob_ids,bands], 
-                                    cl = sample_data$veg_cl_tm)
-  fm <- ranger(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean,
-               data = sample_data, num.trees = 250, mtry = 4)
-  use_all_list[["all_rf"]] <- predict(fm, data = survey_points[oob_ids,])$predictions
-  
-  # put into one iterations slot
-  big_list_alldat[[n_iter]] <- list(oob_ids = oob_ids,
-                                    alldat = use_all_list)
-}
-
-save(big_list_alldat, file = "A:/1_UNSW/0_data/Dharawal_project/big_list_alldat.RData")
+# rm(big_list)
+# 
+# orig_sample_iter <- 800 # number of times to sample the original data
+# orig_sample_frac <- 0.1
+# 
+# bands <- c("blue_mean", "green_mean", "red_mean", "nir_mean")
+# 
+# big_list_alldat <- list()
+# 
+# for (n_iter in 1:orig_sample_iter) {
+#   # progress
+#   print(paste0("Iteration ", n_iter, " out of ", orig_sample_iter))
+#   print(Sys.time())
+#   if (n_iter == 1) {start_time <- Sys.time()}
+#   if (n_iter > 1) {print(paste0("Finish ~ ", start_time + (((Sys.time() - start_time) / (n_iter-1)) * orig_sample_iter)))}
+#   
+#   # sample data
+#   sample_data <- ecologist_sample(survey_points, orig_sample_frac)
+#   oob_ids <- survey_points$id[-sample_data$id]
+#   
+#   # get allocations from training on all data
+#   use_all_list <- list()
+#   fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, data = sample_data)
+#   use_all_list[["all_lda"]] <- predict(fm, newdata = survey_points[oob_ids,])$class
+#   use_all_list[["all_knn"]] <- knn1(train = sample_data[,bands], test = survey_points[oob_ids,bands], 
+#                                     cl = sample_data$veg_cl_tm)
+#   fm <- ranger(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean,
+#                data = sample_data, num.trees = 250, mtry = 4)
+#   use_all_list[["all_rf"]] <- predict(fm, data = survey_points[oob_ids,])$predictions
+#   
+#   # put into one iterations slot
+#   big_list_alldat[[n_iter]] <- list(oob_ids = oob_ids,
+#                                     alldat = use_all_list)
+# }
+# 
+# save(big_list_alldat, file = "A:/1_UNSW/0_data/Dharawal_project/big_list_alldat.RData")
 
 # unfinished nonsense -----------------------------------------------------
 
