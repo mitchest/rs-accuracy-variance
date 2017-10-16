@@ -71,7 +71,7 @@ metric_results <- rbindlist(lapply(
   FUN = collect_one_iteration,
   get_this, big_list, survey_points
 ))
-save(metric_results, file="metric_results_full.RData")
+save(metric_results, file="metric_results.RData")
 
 # metric_results_alldat <- rbindlist(lapply(
 #   X = 1:length(big_list_alldat),
@@ -81,10 +81,10 @@ save(metric_results, file="metric_results_full.RData")
 # metric_results_alldat <- filter(metric_results_alldat, scenario == "alldat")
 # save(metric_results_alldat, file="metric_results_alldat.RData")
 
-load("metric_results_full.RData")
+#load("metric_results_full.RData")
 #load("metric_results_alldat.RData")
 #metric_results <- rbind(metric_results, metric_results_alldat)
-save(metric_results, file="metric_results.RData")
+#save(metric_results, file="metric_results.RData")
 
 
 
