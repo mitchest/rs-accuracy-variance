@@ -1,10 +1,17 @@
 # get samples -------------------------------------------------------------
 
-ecologist_sample <- function(data, samp_frac) {
-  sample_out <- data %>%
-    group_by(veg_cl_tm, studyarea_) %>%
-    sample_frac(samp_frac)
-  as.data.frame(sample_out)
+ecologist_sample <- function(data, samp_frac, stratified = F) {
+  if (stratified) {
+    sample_out <- data %>%
+      group_by(veg_class, study_area) %>%
+      sample_frac(samp_frac)
+    as.data.frame(sample_out)
+  } else {
+    sample_out <- data %>%
+      group_by(study_area) %>%
+      sample_frac(samp_frac)
+    as.data.frame(sample_out)
+  }
 }
 
 # type: 1 = random, 2 = random strat by veg, 3 = random strat by veg & space, 4 = spatial block hold-out
@@ -15,19 +22,19 @@ rrcv_get_train <- function(data, train_frac, type) {
       sample_frac(train_frac)
   } else if (type == 2) {
     train_ids <- data %>%
-      select(id, veg_cl_tm) %>%
-      group_by(veg_cl_tm) %>%
+      select(id, veg_class) %>%
+      group_by(veg_class) %>%
       sample_frac(train_frac)
   } else if (type == 3) {
     train_ids <- data %>%
-      select(id, veg_cl_tm, studyarea_) %>%
-      group_by(veg_cl_tm, studyarea_) %>%
+      select(id, veg_class, study_area) %>%
+      group_by(veg_class, study_area) %>%
       sample_frac(train_frac)
   } else if (type == 4) {
-    blocks <- sample(unique(data$studyarea_), length(unique(data$studyarea_)) * train_frac)
+    blocks <- sample(unique(data$study_area), length(unique(data$study_area)) * train_frac)
     train_ids <- data %>%
-      select(id, studyarea_) %>%
-      filter(studyarea_ %in% blocks)
+      select(id, study_area) %>%
+      filter(study_area %in% blocks)
   }
   as.integer(train_ids$id)
 }
@@ -40,20 +47,20 @@ kfold_get_train <- function(data, kfold_k, type) {
       mutate(fold = sample(rep(sample(kfold_k), length.out = n())))
   } else if (type == 2) {
     train_ids <- data %>%
-      select(id, veg_cl_tm) %>%
-      group_by(veg_cl_tm) %>%
+      select(id, veg_class) %>%
+      group_by(veg_class) %>%
       mutate(fold = sample(rep(sample(kfold_k), length.out = n())))
   } else if (type == 3) {
     train_ids <- data %>%
-      select(id, veg_cl_tm, studyarea_) %>%
-      group_by(veg_cl_tm, studyarea_) %>%
+      select(id, veg_class, study_area) %>%
+      group_by(veg_class, study_area) %>%
       mutate(fold = sample(rep(1:kfold_k, length.out = n()))) #odd.....
   } else if (type == 4) {
     train_ids <- data %>%
-      select(id, studyarea_)
-    blocks <- unique(data$studyarea_)
+      select(id, study_area)
+    blocks <- unique(data$study_area)
     names(blocks) <- sample(rep(sample(kfold_k), length.out = length(blocks)))
-    train_ids$fold <- names(blocks)[data$studyarea_]
+    train_ids$fold <- names(blocks)[data$study_area]
   }
   get_trains_from_kfolds(train_ids)
 }
@@ -78,9 +85,9 @@ get_test_from_trains_list <- function(train_ids_list, full_ids) {
 get_lda_allocation <- function(x, data, train_list, test_list, all_data) {
   train <- train_list[[x]]
   test <- test_list[[x]]
-  fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, # move to character argvar input
+  fm <- lda(veg_class ~ blue_mean + green_mean + red_mean + nir_mean, # move to character argvar input
             data = inner_join(data, data.frame(id=train), by="id"),
-            prior = rep(1/length(unique(data$veg_cl_tm)), length(unique(data$veg_cl_tm))))
+            prior = rep(1/length(unique(data$veg_class)), length(unique(data$veg_class))))
   train_preds <- predict(fm)$class
   test_preds <- predict(fm, newdata = inner_join(data, data.frame(id=test), by="id"))$class
   true_preds <- predict(fm, newdata = all_data)$class
@@ -92,15 +99,15 @@ get_lda_allocation <- function(x, data, train_list, test_list, all_data) {
 #   test <- test_list[[x]]
 #   train_dat <- inner_join(data, data.frame(id=train), by="id")
 #   test_dat <- inner_join(data, data.frame(id=test), by="id")
-#   test_preds <- knn1(train = train_dat[,bands], test = test_dat[,bands], cl = train_dat$veg_cl_tm)
-#   true_preds <- knn1(train = train_dat[,bands], test = all_data[,bands], cl = train_dat$veg_cl_tm)
+#   test_preds <- knn1(train = train_dat[,bands], test = test_dat[,bands], cl = train_dat$veg_class)
+#   true_preds <- knn1(train = train_dat[,bands], test = all_data[,bands], cl = train_dat$veg_class)
 #   list(test_preds, true_preds)
 # }
 
 get_rf_allocation <- function(x, data, train_list, test_list, all_data) {
   train <- train_list[[x]]
   test <- test_list[[x]]
-  fm <- ranger(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, # move to character argvar input
+  fm <- ranger(veg_class ~ blue_mean + green_mean + red_mean + nir_mean, # move to character argvar input
             data = inner_join(data, data.frame(id=train), by="id"), num.trees = 250, mtry = 2)
   train_preds <- fm$predictions
   test_preds <- predict(fm, data = inner_join(data, data.frame(id=test), by="id"))$predictions

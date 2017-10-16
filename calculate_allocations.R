@@ -16,9 +16,9 @@ survey_points_raw <- read.csv("classification_data/observer_class_ads40.csv",
 
 # data prep ---------------------------------------------------------------
 survey_points <- survey_points_raw %>%
-  filter(veg_cl_tm %in% c("bt", "ew", "ttt", "wh")) %>%
-  select(studyarea_, veg_cl_tm, blue_mean:nir_mean) %>%
-  mutate(veg_cl_tm = as.factor(veg_cl_tm),
+  filter(veg_class %in% c("bt", "ew", "ttt", "wh")) %>%
+  select(study_area, veg_class, blue_mean:nir_mean) %>%
+  mutate(veg_class = as.factor(veg_class),
          id = 1:nrow(.)) %>%
   na.omit()
 
@@ -103,11 +103,11 @@ for (n_iter in 1:orig_sample_iter) {
   
   # get allocations from training on all data
   # use_all_list <- list()
-  # fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, data = sample_data)
+  # fm <- lda(veg_class ~ blue_mean + green_mean + red_mean + nir_mean, data = sample_data)
   # use_all_list[["all_lda"]] <- predict(fm, newdata = survey_points)$class
   # use_all_list[["all_knn"]] <- knn1(train = sample_data[,bands], test = survey_points[,bands],
-  #                                   cl = sample_data$veg_cl_tm)
-  # fm <- ranger(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean,
+  #                                   cl = sample_data$veg_class)
+  # fm <- ranger(veg_class ~ blue_mean + green_mean + red_mean + nir_mean,
   #              data = sample_data, num.trees = 250, mtry = 4)
   # use_all_list[["all_rf"]] <- predict(fm, data = survey_points)$predictions
   
@@ -150,11 +150,11 @@ save(big_list, file = "A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
 #   
 #   # get allocations from training on all data
 #   use_all_list <- list()
-#   fm <- lda(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean, data = sample_data)
+#   fm <- lda(veg_class ~ blue_mean + green_mean + red_mean + nir_mean, data = sample_data)
 #   use_all_list[["all_lda"]] <- predict(fm, newdata = survey_points[oob_ids,])$class
 #   use_all_list[["all_knn"]] <- knn1(train = sample_data[,bands], test = survey_points[oob_ids,bands], 
-#                                     cl = sample_data$veg_cl_tm)
-#   fm <- ranger(veg_cl_tm ~ blue_mean + green_mean + red_mean + nir_mean,
+#                                     cl = sample_data$veg_class)
+#   fm <- ranger(veg_class ~ blue_mean + green_mean + red_mean + nir_mean,
 #                data = sample_data, num.trees = 250, mtry = 4)
 #   use_all_list[["all_rf"]] <- predict(fm, data = survey_points[oob_ids,])$predictions
 #   
