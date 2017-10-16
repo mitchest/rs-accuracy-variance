@@ -31,17 +31,17 @@ get_this <- rbind(
     method = c(rep(c("train_lda", "test_lda", "true_lda"), 13)),
     tt = c(rep(c("train", "test", "true"), 13)),
     stringsAsFactors = F),
-  # for knn classifier
-  data.frame(
-    scenario = c(rep("boot", 2),
-                 rep("rrcv", 16),
-                 rep("kfold", 8)),
-    type = c(rep("boot",2),
-             rep(names(big_list[[1]][["rrcv"]]), each = 2),
-             rep(names(big_list[[1]][["kfold"]]), each = 2)),
-    method = c(rep(c("test_knn", "true_knn"), 13)),
-    tt = c(rep(c("test", "true"), 13)),
-    stringsAsFactors = F),
+  # # for knn classifier
+  # data.frame(
+  #   scenario = c(rep("boot", 2),
+  #                rep("rrcv", 16),
+  #                rep("kfold", 8)),
+  #   type = c(rep("boot",2),
+  #            rep(names(big_list[[1]][["rrcv"]]), each = 2),
+  #            rep(names(big_list[[1]][["kfold"]]), each = 2)),
+  #   method = c(rep(c("test_knn", "true_knn"), 13)),
+  #   tt = c(rep(c("test", "true"), 13)),
+  #   stringsAsFactors = F),
   # for rf classifier
   data.frame(
     scenario = c(rep("boot", 3),
@@ -55,12 +55,12 @@ get_this <- rbind(
     stringsAsFactors = F)
   )
 
-get_this_all <- data.frame(
-  scenario = rep("alldat", 3),
-  type = rep("alldat", 3),
-  method = c("all_lda", "all_knn", "all_rf"),
-  tt = rep("alldat", 3),
-  stringsAsFactors = F)
+# get_this_all <- data.frame(
+#   scenario = rep("alldat", 3),
+#   type = rep("alldat", 3),
+#   method = c("all_lda", "all_knn", "all_rf"),
+#   tt = rep("alldat", 3),
+#   stringsAsFactors = F)
 
 
 
