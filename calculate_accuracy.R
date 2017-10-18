@@ -11,12 +11,9 @@ source_lines("calculate_allocations.R", 7:26) # careful!
 #rm(survey_points_raw)
 
 
-load("A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
-#load("A:/1_UNSW/0_data/Dharawal_project/big_list_alldat.RData")
-
-#big_list <- big_list[1]
-#save(big_list, file = "big_list.RData")
-#load("big_list.RData") # temporary so development is more wieldly
+big_list <- readRDS("A:/1_UNSW/0_data/Dharawal_project/big_list.rds")
+big_list_image <- readRDS("big_list_image.rds")
+#readRDS("A:/1_UNSW/0_data/Dharawal_project/big_list_alldat.rds")
 
 # decide what results to extract - be VERY careful, and examine the data frame well
 get_this <- rbind(
@@ -55,23 +52,30 @@ get_this <- rbind(
     stringsAsFactors = F)
   )
 
-# get_this_all <- data.frame(
-#   scenario = rep("alldat", 3),
-#   type = rep("alldat", 3),
-#   method = c("all_lda", "all_knn", "all_rf"),
-#   tt = rep("alldat", 3),
-#   stringsAsFactors = F)
+get_this_image <- data.frame(
+  scenario = c(rep("boot", 2),
+               rep("rrcv", 16),
+               rep("kfold", 8)),
+  type = c(rep("boot", 2),
+           rep(names(big_list_image[[1]][["rrcv"]]), each = 2),
+           rep(names(big_list_image[[1]][["kfold"]]), each = 2)),
+  method = c(rep(c("image_lda", "image_rf"), 13)),
+  tt = c(rep(c("image", "image"), 13)),
+  stringsAsFactors = F)
 
 
 
 # calculate stats ---------------------------------------------------------
+
+# for image_preds
+image_results <- collect_image_iteration(1, get_this_image, big_list_image)
 
 metric_results <- rbindlist(lapply(
   X = 1:length(big_list),
   FUN = collect_one_iteration,
   get_this, big_list, survey_points
 ))
-save(metric_results, file="metric_results.RData")
+saveRDS(metric_results, file="metric_results.rds")
 
 # metric_results_alldat <- rbindlist(lapply(
 #   X = 1:length(big_list_alldat),
@@ -79,79 +83,23 @@ save(metric_results, file="metric_results.RData")
 #   get_this_all, big_list_alldat, survey_points
 # ))
 # metric_results_alldat <- filter(metric_results_alldat, scenario == "alldat")
-# save(metric_results_alldat, file="metric_results_alldat.RData")
+# saveRDS(metric_results_alldat, file="metric_results_alldat.rds")
 
-#load("metric_results_full.RData")
-#load("metric_results_alldat.RData")
+#readRDS("metric_results_full.rds")
+#readRDS("metric_results_alldat.rds")
 #metric_results <- rbind(metric_results, metric_results_alldat)
-#save(metric_results, file="metric_results.RData")
+#saveRDS(metric_results, file="metric_results.rds")
 
 
 
 # plots -------------------------------------------------------------------------
 
-load("metric_results.RData")
+metric_results <- readRDS("metric_results.rds")
 
-# make a long df to plot various method/type combos
-metric_results$sample_origin <- NA
-metric_results$sample_origin[grep("test", metric_results$method)] <- "test"
-metric_results$sample_origin[grep("train", metric_results$method)] <- "train"
-metric_results$sample_origin[grep("true", metric_results$method)] <- "true"
-#metric_results$sample_origin[grep("all", metric_results$method)] <- "all"
-# metric_results$sample_origin <- factor(metric_results$sample_origin, 
-#                                        levels = c("true", "train", "test", "all"))
-metric_results$sample_origin <- factor(metric_results$sample_origin, 
-                                       levels = c("true", "train", "test"))
+metric_results_long <- prettify_results(metric_results)
+image_results_long <- prettify_results_image(image_results)
 
-metric_results$sample_structure <- NA
-metric_results$sample_structure[grep("boot", metric_results$type)] <- "bootstrap"
-metric_results$sample_structure[grep("type1", metric_results$type)] <- "random"
-metric_results$sample_structure[grep("type2", metric_results$type)] <- "class"
-metric_results$sample_structure[grep("type3", metric_results$type)] <- "class-space"
-metric_results$sample_structure[grep("type4", metric_results$type)] <- "block"
-#metric_results$sample_structure[grep("alldat", metric_results$type)] <- "all-data"
-# metric_results$sample_structure <- factor(metric_results$sample_structure,
-#                                           levels = c("bootstrap", "random", "block", "class", "class-space", "all-data"))
-metric_results$sample_structure <- factor(metric_results$sample_structure,
-                                          levels = c("bootstrap", "random", "block", "class", "class-space"))
 
-metric_results$sample_fraction <- NA
-metric_results$sample_fraction[grep("boot", metric_results$type)] <- "bootstrap"
-metric_results$sample_fraction[grep("67", metric_results$type)] <- "67-33"
-metric_results$sample_fraction[grep("80", metric_results$type)] <- "80-20"
-metric_results$sample_fraction[grep("k5", metric_results$type)] <- "5-fold"
-#metric_results$sample_fraction[grep("alldat", metric_results$type)] <- "all-data"
-# metric_results$sample_fraction <- factor(metric_results$sample_fraction,
-#                                           levels = c("all-data", "bootstrap", "67-33", "80-20", "5-fold"))
-metric_results$sample_fraction <- factor(metric_results$sample_fraction,
-                                         levels = c("bootstrap", "67-33", "80-20", "5-fold"))
-
-metric_results$model <- NA
-metric_results$model[grep("lda", metric_results$method)] <- "max-likelihood"
-metric_results$model[grep("knn", metric_results$method)] <- "nearest-n"
-metric_results$model[grep("rf", metric_results$method)] <- "random-forest"
-
-metric_results_long <- metric_results %>%
-  select(perc_agr:wh_prod, model, sample_structure, sample_fraction, sample_origin, iter_n) %>%
-  gather("metric", "value", perc_agr:wh_prod) %>%
-  mutate(metric = factor(metric, levels = c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis",
-                                            "bt_user", "ew_user", "ttt_user", "wh_user",
-                                            "bt_prod", "ew_prod", "ttt_prod", "wh_prod"))) %>%
-  filter(!is.na(value))
-
-metric_results_long$class <- NA
-metric_results_long$class[grep("bt", metric_results_long$metric)] <- "Banksia"
-metric_results_long$class[grep("ew", metric_results_long$metric)] <- "Eucalypt"
-metric_results_long$class[grep("ttt", metric_results_long$metric)] <- "Tea-tree"
-metric_results_long$class[grep("wh", metric_results_long$metric)] <- "Wet-heath"
-metric_results_long$class <- factor(metric_results_long$class,
-                                    levels = c("Banksia","Eucalypt","Tea-tree","Wet-heath"))
-
-metric_results_long$user_prod <- NA
-metric_results_long$user_prod[grep("user", metric_results_long$metric)] <- "user"
-metric_results_long$user_prod[grep("prod", metric_results_long$metric)] <- "producer"
-metric_results_long$user_prod <- factor(metric_results_long$user_prod,
-                                    levels = c("user","producer"))
 
 # main plots
 plot_by_structure(metric_results_long, "max-likelihood", origins = c("test"), suffix = "-test")
@@ -209,7 +157,7 @@ mle_iter_cummean <- metric_results_long %>%
   ylab("Percentage agreement") + xlab("Number of iterations") + theme_bw()
 ggsave("plots/mle_perc-agr_efficiency.png", plot = mle_iter_cummean, device = "png", width = 12, height = 8)
 
-# load("metric_results_long_reps.RData")
+# readRDS("metric_results_long_reps.rds")
 # metric_results_long_reps$reps <- factor(metric_results_long_reps$reps,
 #                                         levels = c("5-reps","50-reps","100-reps"))
 # metric_results_long_reps$sample_origin <- factor(as.character(metric_results_long_reps$sample_origin),
@@ -232,31 +180,36 @@ ggsave("plots/mle_perc-agr_efficiency.png", plot = mle_iter_cummean, device = "p
 
 # main paper figures ------------------------------------------------------
 
-library(grid)
-
-# fig. 2
-fig2 <- metric_results_long %>%
+# fig. 2 (revision)
+figdat <- metric_results_long %>%
   filter(sample_origin %in% c("test"),
          sample_structure %in% c("bootstrap", "random","block", "class", "class-space"),
          model == "max-likelihood",
-         metric %in% c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis")) %>%
-  mutate(metric = recode(metric, "perc_agr" = "percentage agreement", "quant_dis" = "quant. dis.", "alloc_dis" = "alloc. dis."),
-         sample_structure = recode(sample_structure, "class-space" = "class & space")) %>%
-  ggplot(., aes(y = value)) +
-  geom_violin(aes(x = sample_origin, fill = sample_fraction), scale = "area", draw_quantiles = c(0.05,0.5,0.9), lwd=0.25) +
+         metric %in% c("perc_agr")) %>%
+  bind_rows(., filter(image_results_long, model == "max-likelihood")) %>%
+  select(-class, -user_prod, -sample_origin, -model) %>%
+  mutate(metric = recode_factor(metric, "perc_agr" = "Overall accuracy (%)", "Banksia" = "Banksia prop. (%)", 
+                                "Eucalypt" = "Eucalypt prop. (%)", "Teatree" = "Tea Tree prop. (%)", "Wetheath" = "Wet Heath prop. (%)"),
+         sample_structure = recode(sample_structure, "class-space" = "class & space"),
+         value = value * 100) # % for prettier numbers on plot
+fig2 <- ggplot(figdat, aes(y = value)) +
+  geom_violin(aes(x = sample_structure, fill = sample_fraction), scale = "area", draw_quantiles = c(0.05,0.5,0.9), lwd=0.25) +
   scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
-  ylab("Accuracy metric value") + xlab("Sampling stratification design") + 
-  theme_bw() + theme(axis.text.x = element_blank(), strip.text = element_text(size = 12),
-                     axis.ticks.x = element_blank(), axis.title = element_text(size=14)) +
-  facet_grid(metric ~ sample_structure, scales = "free", space = "free", drop = T)
+  ylab("") +
+  xlab("Sampling stratification design") + 
+  theme_bw() + theme(axis.text.x = element_blank(), strip.text = element_text(size = 14),
+                     axis.ticks.x = element_blank(), axis.title = element_text(size = 14),
+                     strip.background = element_rect(colour = NA, fill = NA), strip.placement = "outside") +
+  facet_grid(metric ~ sample_structure, scales = "free", space = "free", switch = 'both', drop = T)
 
 # manual mucking with displays
 fig2G <- ggplotGrob(fig2)
 
-fig2G$widths[c(6,8,10,12)] <- unit(3,"null")
+fig2G$widths[c(6)] <- unit(1,"null")
+fig2G$widths[c(8,10,12,14)] <- unit(3,"null")
 
-fig2G$heights[c(7)] <- unit(1,"null")
-fig2G$heights[c(9,11,13,15,17)] <- unit(0.4,"null")
+fig2G$heights[c(6)] <- unit(1,"null")
+fig2G$heights[c(8,10,12,14)] <- unit(0.5,"null")
 
 # grid.newpage()
 # grid.draw(fig2G)
@@ -264,6 +217,34 @@ fig2G$heights[c(9,11,13,15,17)] <- unit(0.4,"null")
 ggsave(plot = fig2G, filename = paste0("plots/figure2.pdf"), device = "pdf", width = 18, height = 12.5)
 
 
+# # fig. 2
+# fig2 <- metric_results_long %>%
+#   filter(sample_origin %in% c("test"),
+#          sample_structure %in% c("bootstrap", "random","block", "class", "class-space"),
+#          model == "max-likelihood",
+#          metric %in% c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis")) %>%
+#   mutate(metric = recode(metric, "perc_agr" = "percentage agreement", "quant_dis" = "quant. dis.", "alloc_dis" = "alloc. dis."),
+#          sample_structure = recode(sample_structure, "class-space" = "class & space")) %>%
+#   ggplot(., aes(y = value)) +
+#   geom_violin(aes(x = sample_origin, fill = sample_fraction), scale = "area", draw_quantiles = c(0.05,0.5,0.9), lwd=0.25) +
+#   scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
+#   ylab("Accuracy metric value") + xlab("Sampling stratification design") + 
+#   theme_bw() + theme(axis.text.x = element_blank(), strip.text = element_text(size = 12),
+#                      axis.ticks.x = element_blank(), axis.title = element_text(size=14)) +
+#   facet_grid(metric ~ sample_structure, scales = "free", space = "free", drop = T)
+# 
+# # manual mucking with displays
+# fig2G <- ggplotGrob(fig2)
+# 
+# fig2G$widths[c(6,8,10,12)] <- unit(3,"null")
+# 
+# fig2G$heights[c(7)] <- unit(1,"null")
+# fig2G$heights[c(9,11,13,15,17)] <- unit(0.4,"null")
+# 
+# # grid.newpage()
+# # grid.draw(fig2G)
+# 
+# ggsave(plot = fig2G, filename = paste0("plots/figure2.pdf"), device = "pdf", width = 18, height = 12.5)
 
 # fig. 3
 

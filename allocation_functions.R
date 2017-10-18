@@ -82,6 +82,23 @@ get_test_from_trains_list <- function(train_ids_list, full_ids) {
 
 # allocations (model fitting) ---------------------------------------------
 
+# check OS - can use mclapply if on linus or mac
+get_cores <- function() {
+  if (.Platform$OS == "windows") {
+    1
+  } else {
+    detectCores()
+  }
+}
+
+rf_cores <- function() {
+  if (.Platform$OS == "windows") {
+    detectCores()
+  } else {
+    1
+  }
+}
+
 get_lda_allocation <- function(x, data, train_list, test_list, all_data, image_data, n_iter) {
   train <- train_list[[x]]
   test <- test_list[[x]]
@@ -112,12 +129,13 @@ get_rf_allocation <- function(x, data, train_list, test_list, all_data, image_da
   train <- train_list[[x]]
   test <- test_list[[x]]
   fm <- ranger(veg_class ~ blue_mean + green_mean + red_mean + nir_mean, # move to character argvar input
-            data = inner_join(data, data.frame(id=train), by="id"), num.trees = 250, mtry = 2)
+            data = inner_join(data, data.frame(id=train), by="id"), num.trees = 250, mtry = 2,
+            num.threads = rf_cores())
   train_preds <- fm$predictions
-  test_preds <- predict(fm, data = inner_join(data, data.frame(id=test), by="id"))$predictions
-  true_preds <- predict(fm, data = all_data)$predictions
+  test_preds <- predict(fm, data = inner_join(data, data.frame(id=test), by="id"), num.threads = rf_cores())$predictions
+  true_preds <- predict(fm, data = all_data, num.threads = rf_cores())$predictions
   if (n_iter == 1) {
-    image_preds <- table(predict(fm, data = image_data)$predictions)
+    image_preds <- table(predict(fm, data = image_data, num.threads = rf_cores())$predictions)
     return(list(train_preds, test_preds, true_preds, image_preds))
   }
   list(train_preds, test_preds, true_preds)
@@ -128,8 +146,9 @@ boot_allocations <- function(nboot, data, bands, all_data, image_data, n_iter) {
   boot_method[["train"]] <- replicate(n = nboot, expr = {sample(data$id, replace = T)}, simplify = F)
   boot_method[["test"]] <- lapply(X = boot_method[["train"]], FUN = get_test_from_trains, data$id)
   # mle classifications
-  boot_lda <- lapply(X = 1:nboot, FUN = get_lda_allocation,
-                     data, boot_method[["train"]], boot_method[["test"]], all_data, image_data, n_iter)
+  boot_lda <- mclapply(X = 1:nboot, FUN = get_lda_allocation,
+                     data, boot_method[["train"]], boot_method[["test"]], all_data, image_data, n_iter,
+                     mc.cores = get_cores())
   boot_method[["train_lda"]] <- lapply(boot_lda, `[[`, 1)
   boot_method[["test_lda"]] <- lapply(boot_lda, `[[`, 2)
   boot_method[["true_lda"]] <- lapply(boot_lda, `[[`, 3)
@@ -140,8 +159,9 @@ boot_allocations <- function(nboot, data, bands, all_data, image_data, n_iter) {
   # boot_method[["test_knn"]] <- lapply(boot_knn, `[[`, 1)
   # boot_method[["true_knn"]] <- lapply(boot_knn, `[[`, 2)
   # rf classifications
-  boot_rf <- lapply(X = 1:nboot, FUN = get_rf_allocation,
-                    data, boot_method[["train"]], boot_method[["test"]], all_data, image_data, n_iter)
+  boot_rf <- mclapply(X = 1:nboot, FUN = get_rf_allocation,
+                    data, boot_method[["train"]], boot_method[["test"]], all_data, image_data, n_iter,
+                    mc.cores = get_cores())
   boot_method[["train_rf"]] <- lapply(boot_rf, `[[`, 1)
   boot_method[["test_rf"]] <- lapply(boot_rf, `[[`, 2)
   boot_method[["true_rf"]] <- lapply(boot_rf, `[[`, 3)
@@ -158,8 +178,9 @@ rrcv_allocations <- function(x, rrcv_params, rrcv_times, data, bands, all_data, 
   rrcv_method[["train"]] <- replicate(n = rrcv_times, expr = {rrcv_get_train(data, train_frac, type)}, simplify = F)
   rrcv_method[["test"]] <- lapply(X = rrcv_method[["train"]], FUN = get_test_from_trains, data$id)
   # mle classifications
-  rrcv_lda <- lapply(X = 1:rrcv_times, FUN = get_lda_allocation,
-                     data, rrcv_method[["train"]], rrcv_method[["test"]], all_data, image_data, n_iter)
+  rrcv_lda <- mclapply(X = 1:rrcv_times, FUN = get_lda_allocation,
+                     data, rrcv_method[["train"]], rrcv_method[["test"]], all_data, image_data, n_iter,
+                     mc.cores = get_cores())
   rrcv_method[["train_lda"]] <- lapply(rrcv_lda, `[[`, 1)
   rrcv_method[["test_lda"]] <- lapply(rrcv_lda, `[[`, 2)
   rrcv_method[["true_lda"]] <- lapply(rrcv_lda, `[[`, 3)
@@ -170,8 +191,9 @@ rrcv_allocations <- function(x, rrcv_params, rrcv_times, data, bands, all_data, 
   # rrcv_method[["test_knn"]] <- lapply(rrcv_knn, `[[`, 1)
   # rrcv_method[["true_knn"]] <- lapply(rrcv_knn, `[[`, 2)
   # rf classifications
-  rrcv_rf <- lapply(X = 1:rrcv_times, FUN = get_rf_allocation,
-                     data, rrcv_method[["train"]], rrcv_method[["test"]], all_data, image_data, n_iter)
+  rrcv_rf <- mclapply(X = 1:rrcv_times, FUN = get_rf_allocation,
+                     data, rrcv_method[["train"]], rrcv_method[["test"]], all_data, image_data, n_iter,
+                     mc.cores = get_cores())
   rrcv_method[["train_rf"]] <- lapply(rrcv_rf, `[[`, 1)
   rrcv_method[["test_rf"]] <- lapply(rrcv_rf, `[[`, 2)
   rrcv_method[["true_rf"]] <- lapply(rrcv_rf, `[[`, 3)
@@ -188,8 +210,9 @@ kfold_allocations <- function(x, kfold_params, kfold_times, data, bands, all_dat
   kfold_method[["train"]] <- replicate(n = kfold_times, expr = {kfold_get_train(data, kfold_k, type)}, simplify = T)
   kfold_method[["test"]] <- lapply(kfold_method[["train"]], FUN = get_test_from_trains, data$id)
   # mle classifications
-  kfold_lda <- lapply(X = 1:(kfold_times*kfold_k), FUN = get_lda_allocation,
-                      data, kfold_method[["train"]], kfold_method[["test"]], all_data, image_data, n_iter)
+  kfold_lda <- mclapply(X = 1:(kfold_times*kfold_k), FUN = get_lda_allocation,
+                      data, kfold_method[["train"]], kfold_method[["test"]], all_data, image_data, n_iter,
+                      mc.cores = get_cores())
   kfold_method[["train_lda"]] <- lapply(kfold_lda, `[[`, 1)
   kfold_method[["test_lda"]] <- lapply(kfold_lda, `[[`, 2)
   kfold_method[["true_lda"]] <- lapply(kfold_lda, `[[`, 3)
@@ -200,8 +223,9 @@ kfold_allocations <- function(x, kfold_params, kfold_times, data, bands, all_dat
   # kfold_method[["test_knn"]] <- lapply(kfold_knn, `[[`, 1)
   # kfold_method[["true_knn"]] <- lapply(kfold_knn, `[[`, 2)
   # rf classifications
-  kfold_rf <- lapply(X = 1:(kfold_times*kfold_k), FUN = get_rf_allocation,
-                      data, kfold_method[["train"]], kfold_method[["test"]], all_data, image_data, n_iter)
+  kfold_rf <- mclapply(X = 1:(kfold_times*kfold_k), FUN = get_rf_allocation,
+                      data, kfold_method[["train"]], kfold_method[["test"]], all_data, image_data, n_iter,
+                      mc.cores = get_cores())
   kfold_method[["train_rf"]] <- lapply(kfold_rf, `[[`, 1)
   kfold_method[["test_rf"]] <- lapply(kfold_rf, `[[`, 2)
   kfold_method[["true_rf"]] <- lapply(kfold_rf, `[[`, 3)

@@ -170,6 +170,172 @@ collect_one_iteration <- function(iter_n, get_this, big_list, data) {
   )) %>% mutate(iter_n = iter_n)
 }
 
+collect_image_results <- function(this_row, get_this, iter_n){
+  if (get_this$type[this_row] == "boot") {
+    area_tables <- iter_n[[get_this$scenario[this_row]]][[get_this$method[this_row]]]
+  } else {
+    area_tables <- iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]]
+  }
+  prop_tables <- lapply(area_tables, function(x) {x/sum(x)})
+  data.frame(
+    Banksia = unlist(lapply(prop_tables, `[[`, 1)),
+    Eucalypt = unlist(lapply(prop_tables, `[[`, 2)),
+    Teatree = unlist(lapply(prop_tables, `[[`, 3)),
+    Wetheath = unlist(lapply(prop_tables, `[[`, 4)),
+    # method info
+    type = get_this$type[this_row],
+    method = get_this$method[this_row],
+    scenario = get_this$scenario[this_row])
+}
+
+collect_image_iteration <- function(iter_n, get_this, big_list) {
+  print(paste0("Collecting iteration ", iter_n))
+  print(Sys.time())
+  rbindlist(lapply(
+    X = 1:nrow(get_this),
+    FUN = collect_image_results,
+    get_this,
+    big_list[[iter_n]]
+  )) %>% mutate(iter_n = iter_n)
+}
+
+
+
+# transform data for plotting ---------------------------------------------
+
+prettify_results <- function(metric_results) {
+  # make a long df to plot various method/type combos
+  
+  print("Origins")
+  metric_results$sample_origin <- NA
+  metric_results$sample_origin[grep("test", metric_results$method)] <- "test"
+  metric_results$sample_origin[grep("train", metric_results$method)] <- "train"
+  metric_results$sample_origin[grep("true", metric_results$method)] <- "true"
+  #metric_results$sample_origin[grep("all", metric_results$method)] <- "all"
+  # metric_results$sample_origin <- factor(metric_results$sample_origin, 
+  #                                        levels = c("true", "train", "test", "all"))
+  metric_results$sample_origin <- factor(metric_results$sample_origin, 
+                                         levels = c("true", "train", "test"))
+  
+  print("Designs")
+  metric_results$sample_structure <- NA
+  metric_results$sample_structure[grep("boot", metric_results$type)] <- "bootstrap"
+  metric_results$sample_structure[grep("type1", metric_results$type)] <- "random"
+  metric_results$sample_structure[grep("type2", metric_results$type)] <- "class"
+  metric_results$sample_structure[grep("type3", metric_results$type)] <- "class-space"
+  metric_results$sample_structure[grep("type4", metric_results$type)] <- "block"
+  #metric_results$sample_structure[grep("alldat", metric_results$type)] <- "all-data"
+  # metric_results$sample_structure <- factor(metric_results$sample_structure,
+  #                                           levels = c("bootstrap", "random", "block", "class", "class-space", "all-data"))
+  metric_results$sample_structure <- factor(metric_results$sample_structure,
+                                            levels = c("bootstrap", "random", "block", "class", "class-space"))
+  
+  print("Fractions")
+  metric_results$sample_fraction <- NA
+  metric_results$sample_fraction[grep("boot", metric_results$type)] <- "bootstrap"
+  metric_results$sample_fraction[grep("67", metric_results$type)] <- "67-33"
+  metric_results$sample_fraction[grep("80", metric_results$type)] <- "80-20"
+  metric_results$sample_fraction[grep("k5", metric_results$type)] <- "5-fold"
+  #metric_results$sample_fraction[grep("alldat", metric_results$type)] <- "all-data"
+  # metric_results$sample_fraction <- factor(metric_results$sample_fraction,
+  #                                           levels = c("all-data", "bootstrap", "67-33", "80-20", "5-fold"))
+  metric_results$sample_fraction <- factor(metric_results$sample_fraction,
+                                           levels = c("bootstrap", "67-33", "80-20", "5-fold"))
+  
+  print("Models")
+  metric_results$model <- NA
+  metric_results$model[grep("lda", metric_results$method)] <- "max-likelihood"
+  #metric_results$model[grep("knn", metric_results$method)] <- "nearest-n"
+  metric_results$model[grep("rf", metric_results$method)] <- "random-forest"
+  
+  print("Go long!")
+  metric_results_long <- metric_results %>%
+    select(perc_agr:wh_prod, model, sample_structure, sample_fraction, sample_origin, iter_n) %>%
+    gather("metric", "value", perc_agr:wh_prod) %>%
+    mutate(metric = factor(metric, levels = c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis",
+                                              "bt_user", "ew_user", "ttt_user", "wh_user",
+                                              "bt_prod", "ew_prod", "ttt_prod", "wh_prod"))) %>%
+    filter(!is.na(value))
+  
+  print("Which tree?")
+  metric_results_long$class <- NA
+  metric_results_long$class[grep("bt", metric_results_long$metric)] <- "Banksia"
+  metric_results_long$class[grep("ew", metric_results_long$metric)] <- "Eucalypt"
+  metric_results_long$class[grep("ttt", metric_results_long$metric)] <- "Tea-tree"
+  metric_results_long$class[grep("wh", metric_results_long$metric)] <- "Wet-heath"
+  metric_results_long$class <- factor(metric_results_long$class,
+                                      levels = c("Banksia","Eucalypt","Tea-tree","Wet-heath"))
+  
+  print("Which one?")
+  metric_results_long$user_prod <- NA
+  metric_results_long$user_prod[grep("user", metric_results_long$metric)] <- "user"
+  metric_results_long$user_prod[grep("prod", metric_results_long$metric)] <- "producer"
+  metric_results_long$user_prod <- factor(metric_results_long$user_prod,
+                                          levels = c("user","producer"))
+  
+  metric_results_long
+  
+}
+
+prettify_results_image <- function(metric_results) {
+  # make a long df to plot various method/type combos
+  
+  print("Origins")
+  metric_results$sample_origin <- factor("image")
+  
+  print("Designs")
+  metric_results$sample_structure <- NA
+  metric_results$sample_structure[grep("boot", metric_results$type)] <- "bootstrap"
+  metric_results$sample_structure[grep("type1", metric_results$type)] <- "random"
+  metric_results$sample_structure[grep("type2", metric_results$type)] <- "class"
+  metric_results$sample_structure[grep("type3", metric_results$type)] <- "class-space"
+  metric_results$sample_structure[grep("type4", metric_results$type)] <- "block"
+  #metric_results$sample_structure[grep("alldat", metric_results$type)] <- "all-data"
+  # metric_results$sample_structure <- factor(metric_results$sample_structure,
+  #                                           levels = c("bootstrap", "random", "block", "class", "class-space", "all-data"))
+  metric_results$sample_structure <- factor(metric_results$sample_structure,
+                                            levels = c("bootstrap", "random", "block", "class", "class-space"))
+  
+  print("Fractions")
+  metric_results$sample_fraction <- NA
+  metric_results$sample_fraction[grep("boot", metric_results$type)] <- "bootstrap"
+  metric_results$sample_fraction[grep("67", metric_results$type)] <- "67-33"
+  metric_results$sample_fraction[grep("80", metric_results$type)] <- "80-20"
+  metric_results$sample_fraction[grep("k5", metric_results$type)] <- "5-fold"
+  #metric_results$sample_fraction[grep("alldat", metric_results$type)] <- "all-data"
+  # metric_results$sample_fraction <- factor(metric_results$sample_fraction,
+  #                                           levels = c("all-data", "bootstrap", "67-33", "80-20", "5-fold"))
+  metric_results$sample_fraction <- factor(metric_results$sample_fraction,
+                                           levels = c("bootstrap", "67-33", "80-20", "5-fold"))
+  
+  print("Models")
+  metric_results$model <- NA
+  metric_results$model[grep("lda", metric_results$method)] <- "max-likelihood"
+  #metric_results$model[grep("knn", metric_results$method)] <- "nearest-n"
+  metric_results$model[grep("rf", metric_results$method)] <- "random-forest"
+  
+  print("Go long!")
+  metric_results_long <- metric_results %>%
+    select(Banksia:Wetheath, model, sample_structure, sample_fraction, sample_origin, iter_n) %>%
+    gather("metric", "value", Banksia:Wetheath) %>%
+    mutate(metric = factor(metric, levels = c("Banksia","Eucalypt","Teatree","Wetheath"))) %>%
+    filter(!is.na(value))
+  
+  print("Which tree?")
+  metric_results_long$class <- NA
+  metric_results_long$class[grep("Banksia", metric_results_long$metric)] <- "Banksia"
+  metric_results_long$class[grep("Eucalypt", metric_results_long$metric)] <- "Eucalypt"
+  metric_results_long$class[grep("Teatree", metric_results_long$metric)] <- "Tea-tree"
+  metric_results_long$class[grep("Wetheath", metric_results_long$metric)] <- "Wet-heath"
+  metric_results_long$class <- factor(metric_results_long$class,
+                                      levels = c("Banksia","Eucalypt","Tea-tree","Wet-heath"))
+  
+  print("Which one?")
+  metric_results_long$user_prod <- NA
+  
+  metric_results_long
+}
+
 
 
 # plots -------------------------------------------------------------------

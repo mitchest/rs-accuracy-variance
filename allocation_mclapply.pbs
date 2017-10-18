@@ -1,0 +1,16 @@
+#!/bin/bash
+ 
+#PBS -l nodes=1:ppn=8
+#PBS -l vmem=60gb
+#PBS -l walltime=11:59:59
+
+#PBS -M mitchell.lyons@unsw.edu.au
+#PBS -m ae
+#PBS -j oe
+
+module add R/3.3.1
+module add gcc/6.2.0
+
+cd $HOME/rs_allocations_boots
+
+Rscript calculate_allocations.R --vanilla

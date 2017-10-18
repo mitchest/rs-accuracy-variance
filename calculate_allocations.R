@@ -1,3 +1,4 @@
+library(parallel)
 library(MASS)
 library(class)
 library(ranger)
@@ -12,7 +13,7 @@ source("allocation_functions.R")
 survey_points_raw <- read.csv("classification_data/observer_class_ads40.csv",
                           header = T, stringsAsFactors = F)
 
-load("classification_data/image_data.RData") # pre-made df with image data (quickes/easiest option here) - it is BIG, literally a data frame with squillions of rows (i.e. pixels)
+image_data <- readRDS("classification_data/image_data.rds") # pre-made df with image data (quickes/easiest option here) - it is BIG, literally a data frame with squillions of rows (i.e. pixels)
 
 
 # data prep ---------------------------------------------------------------
@@ -29,11 +30,11 @@ rm(survey_points_raw)
 
 # parameterise analysis ---------------------------------------------------
 
-orig_sample_iter <- 1 # number of times to sample the original data
+orig_sample_iter <- 6 # number of times to sample the original data
 orig_sample_frac <- 0.1
-nboot <- 5 # number of bootstrap samples
-rrcv_times <- 5 # number of times to do random repeat CV
-kfold_times <- 1 # number of times to repeat the k-fold CV
+nboot <- 800 # number of bootstrap samples
+rrcv_times <- 800 # number of times to do random repeat CV
+kfold_times <- 160 # number of times to repeat the k-fold CV
 #kfold_k <- 5 # k for k-fold
 bands <- c("blue_mean", "green_mean", "red_mean", "nir_mean")
 
@@ -52,12 +53,14 @@ kfold_params <- data.frame(kfold_k = rep(5, 4),
 
 big_list <- list()
 
-for (n_iter in 1:orig_sample_iter) {
+for (n_iter in 2:orig_sample_iter) {
   # progress
   print(paste0("Iteration ", n_iter, " out of ", orig_sample_iter))
   print(Sys.time())
+  print(paste0(gc()[2,2], " Mb"))
   if (n_iter == 2) {start_time <- Sys.time()}
   if (n_iter > 2) {print(paste0("Finish ~ ", start_time + (((Sys.time() - start_time) / (n_iter-2)) * (orig_sample_iter-1))))}
+  if (n_iter >= 2) {image_data <- NULL}
   
   # sample data
   sample_data <- ecologist_sample(survey_points, orig_sample_frac)
@@ -118,7 +121,7 @@ for (n_iter in 1:orig_sample_iter) {
                              kfold = kfold_list)
 }
 
-save(big_list, file = "A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
+saveRDS(big_list, file = "big_list.rds")
 
 
 
@@ -164,7 +167,7 @@ save(big_list, file = "A:/1_UNSW/0_data/Dharawal_project/big_list.RData")
 #                                     alldat = use_all_list)
 # }
 # 
-# save(big_list_alldat, file = "A:/1_UNSW/0_data/Dharawal_project/big_list_alldat.RData")
+# saveRDS(big_list_alldat, file = "A:/1_UNSW/0_data/Dharawal_project/big_list_alldat.rds")
 
 # unfinished nonsense -----------------------------------------------------
 
