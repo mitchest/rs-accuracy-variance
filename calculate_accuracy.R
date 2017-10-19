@@ -10,8 +10,8 @@ source("accuracy_functions.R")
 source_lines("calculate_allocations.R", 7:26) # careful!
 #rm(survey_points_raw)
 
-
-big_list <- readRDS("A:/1_UNSW/0_data/Dharawal_project/big_list.rds")
+iters <- list.files("A:/1_UNSW/0_data/Dharawal_project/iters/", pattern = ".rds", full.names = T)
+big_list <- lapply(iters, FUN = function(x){readRDS(x)})
 big_list_image <- readRDS("big_list_image.rds")
 #readRDS("A:/1_UNSW/0_data/Dharawal_project/big_list_alldat.rds")
 
