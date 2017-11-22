@@ -340,6 +340,10 @@ prettify_results_image <- function(metric_results) {
 
 # plots -------------------------------------------------------------------
 
+pretty_breaks <- function(x) {
+  seq(from = floor(x[1]), to = ceiling(x[2]), by = 2)
+}
+
 plot_pa_results <- function(x, data) {
   ggplot(data = data[data$iter_n %in% x,], aes(y = perc_agr)) +
     geom_boxplot(aes(x = type, colour = scenario, fill = method)) +
