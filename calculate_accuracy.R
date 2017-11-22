@@ -69,6 +69,7 @@ get_this_image <- data.frame(
 
 # for image_preds
 image_results <- collect_image_iteration(1, get_this_image, big_list_image)
+saveRDS(image_results, file="image_results.rds")
 
 metric_results <- rbindlist(lapply(
   X = 1:length(big_list),
@@ -95,29 +96,165 @@ saveRDS(metric_results, file="metric_results.rds")
 # plots -------------------------------------------------------------------------
 
 metric_results <- readRDS("metric_results.rds")
+image_results <- readRDS("image_results.rds")
 
 metric_results_long <- prettify_results(metric_results)
 image_results_long <- prettify_results_image(image_results)
 
 
+##### main paper figures
 
-# main plots
+# fig. 2 (accuracy resutls)
+fig2 <- metric_results_long %>%
+  filter(sample_origin %in% c("test"),
+         sample_structure %in% c("bootstrap", "random","block", "class", "class-space"),
+         model == "max-likelihood",
+         metric %in% c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis")) %>%
+  mutate(metric = recode(metric, "perc_agr" = "percentage agreement", "quant_dis" = "quant. dis.", "alloc_dis" = "alloc. dis."),
+         sample_structure = recode(sample_structure, "class-space" = "class & space")) %>%
+  ggplot(., aes(y = value)) +
+  geom_violin(aes(x = sample_origin, fill = sample_fraction), scale = "area", draw_quantiles = c(0.05,0.5,0.9), lwd=0.25) +
+  scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
+  ylab("Accuracy metric value") + xlab("Sampling stratification design") +
+  theme_bw() + theme(axis.text.x = element_blank(), strip.text = element_text(size = 14),
+                     axis.ticks.x = element_blank(), axis.title = element_text(size = 14),
+                     strip.background = element_rect(colour = NA, fill = NA)) +
+  facet_grid(metric ~ sample_structure, scales = "free", space = "free", drop = T)
+
+# manual mucking with displays
+fig2G <- ggplotGrob(fig2)
+
+fig2G$widths[c(4)] <- unit(1,"null")
+fig2G$widths[c(6,8,10,12)] <- unit(3,"null")
+
+fig2G$heights[c(7)] <- unit(1,"null")
+fig2G$heights[c(9,11,13,15,17)] <- unit(0.4,"null")
+
+# grid.newpage()
+# grid.draw(fig2G)
+
+ggsave(plot = fig2G, filename = paste0("plots/figure2.pdf"), device = "pdf", width = 18, height = 12.5)
+
+
+
+# fig. 3 (area estimates)
+fig3dat <- image_results_long %>%
+  filter(model == "max-likelihood") %>%
+  select(-class, -user_prod, -sample_origin, -model) %>%
+  mutate(metric = recode_factor(metric, "Banksia" = "Banksia Thicket", "Eucalypt" = "Eucalypt Woodland",
+                                "Teatree" = "Tea Tree Thicket", "Wetheath" = "Wet Heath"),
+         sample_structure = recode(sample_structure, "class-space" = "class & space"),
+         value = value * 100) # % for prettier numbers on plot
+fig3 <- ggplot(figdat, aes(y = value)) +
+  geom_violin(aes(x = sample_structure, fill = sample_fraction), scale = "area", draw_quantiles = c(0.05,0.5,0.9), lwd=0.25) +
+  scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
+  scale_y_continuous(breaks = pretty_breaks) +
+  ylab("Proportion of mapped area (%)") +
+  xlab("Sampling stratification design") + 
+  theme_bw() + theme(axis.text.x = element_blank(), strip.text = element_text(size = 14),
+                     axis.ticks.x = element_blank(), axis.title = element_text(size = 14),
+                     strip.background = element_rect(colour = NA, fill = NA)) +
+  facet_grid(metric ~ sample_structure, scales = "free", space = "free", drop = T)
+
+# manual mucking with displays
+fig3G <- ggplotGrob(fig3)
+
+fig3G$widths[c(4)] <- unit(1,"null")
+fig3G$widths[c(6,8,10,12)] <- unit(3,"null")
+
+fig3G$heights[c(7,9,11,13)] <- unit(1,"null")
+
+# grid.newpage()
+# grid.draw(fig2G)
+
+ggsave(plot = fig3G, filename = paste0("plots/figure3.pdf"), device = "pdf", width = 18, height = 12.5)
+
+
+
+##### supplementary material plots
+
+# fig. X (user producer?)
+#stats first 
+# looks at mean/CI/min-max summaries
+metric_stats <- metric_results_long %>%
+  group_by(model, sample_structure, sample_fraction, sample_origin, metric) %>%
+  summarise(mean = mean(value),
+            median = median(value),
+            upper = quantile(value, 0.95),
+            lower = quantile(value, 0.05),
+            max = max(value),
+            min = min(value)) %>%
+  mutate_at(vars(mean:min), funs(round(.,3))) %>%
+  ungroup() %>%
+  mutate(sample_structure = recode(sample_structure, "bootstrap" = "BS", "class-space" = "class & space"))
+
+# User/prod table supp plots
+user_prod_names <- c("bt_prod", "ew_prod", "ttt_prod", "wh_prod", "bt_user", "ew_user", "ttt_user", "wh_user")
+user_prod_table <- metric_stats %>%
+  filter(sample_origin == "test",
+         metric %in% user_prod_names)
+user_prod_table$class <- NA
+user_prod_table$class[grep("bt", user_prod_table$metric)] <- "Banksia"
+user_prod_table$class[grep("ew", user_prod_table$metric)] <- "Eucalypt"
+user_prod_table$class[grep("ttt", user_prod_table$metric)] <- "Tea tree"
+user_prod_table$class[grep("wh", user_prod_table$metric)] <- "Wet heath"
+user_prod_table$user_prod <- NA
+user_prod_table$user_prod[grep("user", user_prod_table$metric)] <- "user"
+user_prod_table$user_prod[grep("prod", user_prod_table$metric)] <- "producer"
+#write.csv(user_prod_table, file = "plots/user_prod_table.csv")
+
+user_prod_ml <- user_prod_table %>%
+  filter(sample_origin %in% c("test"),
+         sample_structure %in% c("BS", "random","block", "class", "class & space"),
+         model == "max-likelihood",
+         metric %in% c("bt_user", "ew_user", "ttt_user", "wh_user","perc_agr", "bt_prod", "ew_prod", "ttt_prod", "wh_prod")) %>%
+  ggplot(., aes(y = median)) +
+  geom_errorbar(aes(x = sample_fraction, ymin = lower, ymax = upper), width = 0) +
+  geom_point(aes(x = sample_fraction)) +
+  #geom_boxplot(aes(x = sample_fraction)) +
+  scale_y_continuous(breaks = c(0,0.5,1)) +
+  #scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
+  #scale_colour_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
+  ylab("Accuracy value") + xlab("Sampling stratification design") + 
+  theme_bw() + theme(strip.text = element_text(size = 12), axis.title = element_text(size=14)) +
+  facet_grid(class + user_prod ~ sample_structure, scales = "free_x", space = "free", drop = T)
+ggsave(plot = user_prod_ml, filename = paste0("plots/user_prod_ml.png"), device = "png", width = 11, height = 8)
+
+user_prod_rf <- user_prod_table %>%
+  filter(sample_origin %in% c("test"),
+         sample_structure %in% c("BS", "random","block", "class", "class & space"),
+         model == "random-forest",
+         metric %in% c("bt_user", "ew_user", "ttt_user", "wh_user","perc_agr", "bt_prod", "ew_prod", "ttt_prod", "wh_prod")) %>%
+  ggplot(., aes(y = median)) +
+  geom_errorbar(aes(x = sample_fraction, ymin = lower, ymax = upper), width = 0) +
+  geom_point(aes(x = sample_fraction)) +
+  scale_y_continuous(breaks = c(0,0.5,1)) +
+  #scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
+  #scale_colour_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
+  ylab("Accuracy value") + xlab("Sampling stratification design") + 
+  theme_bw() + theme(strip.text = element_text(size = 12), axis.title = element_text(size=14)) +
+  facet_grid(class + user_prod ~ sample_structure, scales = "free_x", space = "free", drop = T)
+ggsave(plot = user_prod_rf, filename = paste0("plots/user_prod_rf.png"), device = "png", width = 11, height = 8)
+
+
+
+# supp plots for full ML/RF results
 plot_by_structure(metric_results_long, "max-likelihood", origins = c("test"), suffix = "-test")
 
-plot_by_structure(metric_results_long, "max-likelihood", origins = c("train", "test", "true"))
-plot_by_structure(metric_results_long, "random-forest", origins = c("train", "test", "true"))
-plot_by_structure(metric_results_long, "nearest-n", origins = c("train", "test", "true"))
+plot_by_structure(metric_results_long, "max-likelihood", origins = c("test", "true"))
+plot_by_structure(metric_results_long, "random-forest", origins = c("test", "true"))
+#plot_by_structure(metric_results_long, "nearest-n", origins = c("train", "test", "true"))
 
-plot_by_model(metric_results_long, c("max-likelihood","random-forest", "nearest-n"), origins = c("test"), suffix = "ml-nn-rf-test")
+#plot_by_model(metric_results_long, c("max-likelihood","random-forest", "nearest-n"), origins = c("test"), suffix = "ml-nn-rf-test")
 
 plot_user_prod(metric_results_long, c("max-likelihood"), suffix = "ml-user-prod-test")
 plot_user_prod(metric_results_long, c("max-likelihood"), origins = c("train"), suffix = "ml-user-prod-train")
 # plot_user_prod(metric_results_long, c("max-likelihood"), origins = c("true"), suffix = "ml-true-user-prod")
 
-plot_by_structure(metric_results_long, "max-likelihood", origins = c("true", "train","test"),
+plot_by_structure(metric_results_long, "max-likelihood", origins = c("true","test"),
                   metrics = c("bt_user", "ew_user", "ttt_user", "wh_user"),
                   suffix = "-user", scales = "free_x")
-plot_by_structure(metric_results_long, "max-likelihood", origins = c("true", "train","test"),
+plot_by_structure(metric_results_long, "max-likelihood", origins = c("true","test"),
                   metrics = c("bt_prod", "ew_prod", "ttt_prod", "wh_prod"),
                   suffix = "-producer", scales = "free_x")
 
@@ -133,11 +270,11 @@ plot_by_structure(metric_results_long, "max-likelihood", origins = c("train","te
 
 mle_train_test_iters <- metric_results_long %>%
   filter(sample_origin %in% c("true", "test"),
-    #sample_fraction %in% c("all-data", "67-33", "5-fold"),
-    metric == "perc_agr",
-    iter_n %in% c(1,4,13,19), 
-    model == "max-likelihood",
-    metric != "purity") %>%
+         #sample_fraction %in% c("all-data", "67-33", "5-fold"),
+         metric == "perc_agr",
+         iter_n %in% c(1,4,13,19), 
+         model == "max-likelihood",
+         metric != "purity") %>%
   ggplot(., aes(y = value)) +
   geom_violin(aes(x = sample_structure, fill = sample_fraction), scale = "area", draw_quantiles = c(0.05,0.5,0.9), lwd=0.25) +
   scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
@@ -154,7 +291,9 @@ mle_iter_cummean <- metric_results_long %>%
   mutate(iterations = 1:n(), cum_med = cummean(value), scenario = paste0(sample_structure,"_",sample_fraction)) %>%
   ggplot(., aes(y = cum_med, x = iterations)) +
   geom_line(aes(colour = scenario)) +
-  ylab("Percentage agreement") + xlab("Number of iterations") + theme_bw()
+  #scale_colour_brewer(palette = "RdYlGn") +
+  ylab("Percentage agreement") + xlab("Number of iterations") + theme_bw() +
+  facet_wrap(facets = ~sample_fraction)
 ggsave("plots/mle_perc-agr_efficiency.png", plot = mle_iter_cummean, device = "png", width = 12, height = 8)
 
 # readRDS("metric_results_long_reps.rds")
@@ -176,124 +315,6 @@ ggsave("plots/mle_perc-agr_efficiency.png", plot = mle_iter_cummean, device = "p
 #   facet_grid(reps ~ sample_origin, scales = "free", space = "free", drop = T)
 # ggsave("plots/mle_perc-agr_efficiency.pdf", plot = mle_percagr_reps, device = "pdf", width = 20, height = 13)
 
-
-
-# main paper figures ------------------------------------------------------
-
-# fig. 2 (revision)
-figdat <- metric_results_long %>%
-  filter(sample_origin %in% c("test"),
-         sample_structure %in% c("bootstrap", "random","block", "class", "class-space"),
-         model == "max-likelihood",
-         metric %in% c("perc_agr")) %>%
-  bind_rows(., filter(image_results_long, model == "max-likelihood")) %>%
-  select(-class, -user_prod, -sample_origin, -model) %>%
-  mutate(metric = recode_factor(metric, "perc_agr" = "Overall accuracy (%)", "Banksia" = "Banksia prop. (%)", 
-                                "Eucalypt" = "Eucalypt prop. (%)", "Teatree" = "Tea Tree prop. (%)", "Wetheath" = "Wet Heath prop. (%)"),
-         sample_structure = recode(sample_structure, "class-space" = "class & space"),
-         value = value * 100) # % for prettier numbers on plot
-fig2 <- ggplot(figdat, aes(y = value)) +
-  geom_violin(aes(x = sample_structure, fill = sample_fraction), scale = "area", draw_quantiles = c(0.05,0.5,0.9), lwd=0.25) +
-  scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
-  ylab("") +
-  xlab("Sampling stratification design") + 
-  theme_bw() + theme(axis.text.x = element_blank(), strip.text = element_text(size = 14),
-                     axis.ticks.x = element_blank(), axis.title = element_text(size = 14),
-                     strip.background = element_rect(colour = NA, fill = NA), strip.placement = "outside") +
-  facet_grid(metric ~ sample_structure, scales = "free", space = "free", switch = 'both', drop = T)
-
-# manual mucking with displays
-fig2G <- ggplotGrob(fig2)
-
-fig2G$widths[c(6)] <- unit(1,"null")
-fig2G$widths[c(8,10,12,14)] <- unit(3,"null")
-
-fig2G$heights[c(6)] <- unit(1,"null")
-fig2G$heights[c(8,10,12,14)] <- unit(0.5,"null")
-
-# grid.newpage()
-# grid.draw(fig2G)
-
-ggsave(plot = fig2G, filename = paste0("plots/figure2.pdf"), device = "pdf", width = 18, height = 12.5)
-
-
-# # fig. 2
-# fig2 <- metric_results_long %>%
-#   filter(sample_origin %in% c("test"),
-#          sample_structure %in% c("bootstrap", "random","block", "class", "class-space"),
-#          model == "max-likelihood",
-#          metric %in% c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis")) %>%
-#   mutate(metric = recode(metric, "perc_agr" = "percentage agreement", "quant_dis" = "quant. dis.", "alloc_dis" = "alloc. dis."),
-#          sample_structure = recode(sample_structure, "class-space" = "class & space")) %>%
-#   ggplot(., aes(y = value)) +
-#   geom_violin(aes(x = sample_origin, fill = sample_fraction), scale = "area", draw_quantiles = c(0.05,0.5,0.9), lwd=0.25) +
-#   scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
-#   ylab("Accuracy metric value") + xlab("Sampling stratification design") + 
-#   theme_bw() + theme(axis.text.x = element_blank(), strip.text = element_text(size = 12),
-#                      axis.ticks.x = element_blank(), axis.title = element_text(size=14)) +
-#   facet_grid(metric ~ sample_structure, scales = "free", space = "free", drop = T)
-# 
-# # manual mucking with displays
-# fig2G <- ggplotGrob(fig2)
-# 
-# fig2G$widths[c(6,8,10,12)] <- unit(3,"null")
-# 
-# fig2G$heights[c(7)] <- unit(1,"null")
-# fig2G$heights[c(9,11,13,15,17)] <- unit(0.4,"null")
-# 
-# # grid.newpage()
-# # grid.draw(fig2G)
-# 
-# ggsave(plot = fig2G, filename = paste0("plots/figure2.pdf"), device = "pdf", width = 18, height = 12.5)
-
-# fig. 3
-
-#stats first 
-# looks at mean/CI/min-max summaries
-metric_stats <- metric_results_long %>%
-  group_by(model, sample_structure, sample_fraction, sample_origin, metric) %>%
-  summarise(mean = mean(value),
-            median = median(value),
-            upper = quantile(value, 0.95),
-            lower = quantile(value, 0.05),
-            max = max(value),
-            min = min(value)) %>%
-  mutate_at(vars(mean:min), funs(round(.,3))) %>%
-  ungroup() %>%
-  mutate(sample_structure = recode(sample_structure, "bootstrap" = "BS", "class-space" = "class & space"))
-
-# User/prod table
-user_prod_names <- c("bt_prod", "ew_prod", "ttt_prod", "wh_prod", "bt_user", "ew_user", "ttt_user", "wh_user")
-user_prod_table <- metric_stats %>%
-  filter(model == "max-likelihood", sample_origin == "test",
-         metric %in% user_prod_names)
-user_prod_table$class <- NA
-user_prod_table$class[grep("bt", user_prod_table$metric)] <- "Banksia"
-user_prod_table$class[grep("ew", user_prod_table$metric)] <- "Eucalypt"
-user_prod_table$class[grep("ttt", user_prod_table$metric)] <- "Tea tree"
-user_prod_table$class[grep("wh", user_prod_table$metric)] <- "Wet heath"
-user_prod_table$user_prod <- NA
-user_prod_table$user_prod[grep("user", user_prod_table$metric)] <- "user"
-user_prod_table$user_prod[grep("prod", user_prod_table$metric)] <- "producer"
-#write.csv(user_prod_table, file = "plots/user_prod_table.csv")
-
-# figure
-fig3 <- user_prod_table %>%
-  filter(sample_origin %in% c("test"),
-         sample_structure %in% c("BS", "random","block", "class", "class & space"),
-         model == "max-likelihood",
-         metric %in% c("bt_user", "ew_user", "ttt_user", "wh_user","perc_agr", "bt_prod", "ew_prod", "ttt_prod", "wh_prod")) %>%
-  ggplot(., aes(y = median)) +
-  geom_errorbar(aes(x = sample_fraction, ymin = min, ymax = max), width = 0) +
-  geom_point(aes(x = sample_fraction)) +
-  scale_y_continuous(breaks = c(0,0.5,1)) +
-  #scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
-  #scale_colour_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
-  ylab("Accuracy value") + xlab("Sampling stratification design") + 
-  theme_bw() + theme(strip.text = element_text(size = 12), axis.title = element_text(size=14)) +
-  facet_grid(class + user_prod ~ sample_structure, scales = "free_x", space = "free", drop = T)
-
-ggsave(plot = fig3, filename = paste0("plots/figure3.pdf"), device = "pdf", width = 11, height = 8)
 
 # junk --------------------------------------------------------------------
 
