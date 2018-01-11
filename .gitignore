@@ -40,3 +40,6 @@ big_list.RData
 *.docx
 big_list_lite.RData
 plots/
+manuscript/
+tests/
+API_data/
