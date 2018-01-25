@@ -361,6 +361,7 @@ plot_by_structure <- function(data, model_type,
            sample_structure %in% structures,
            model == model_type,
            metric %in% metrics) %>%
+    mutate(metric = recode_factor(metric, "perc_agr" = "overall accuracy")) %>%
     ggplot(., aes(y = value)) +
     geom_violin(aes(x = sample_origin, fill = sample_fraction), scale = "area", draw_quantiles = quants, lwd=0.25) +
     scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +

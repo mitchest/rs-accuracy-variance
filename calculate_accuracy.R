@@ -110,7 +110,7 @@ fig2 <- metric_results_long %>%
          sample_structure %in% c("bootstrap", "random","block", "class", "class-space"),
          model == "max-likelihood",
          metric %in% c("perc_agr", "kappa", "entropy", "purity", "quant_dis", "alloc_dis")) %>%
-  mutate(metric = recode(metric, "perc_agr" = "percentage agreement", "quant_dis" = "quant. dis.", "alloc_dis" = "alloc. dis."),
+  mutate(metric = recode(metric, "perc_agr" = "overall accuracy", "quant_dis" = "quant. dis.", "alloc_dis" = "alloc. dis."),
          sample_structure = recode(sample_structure, "class-space" = "class & space")) %>%
   ggplot(., aes(y = value)) +
   geom_violin(aes(x = sample_origin, fill = sample_fraction), scale = "area", draw_quantiles = c(0.05,0.5,0.9), lwd=0.25) +
@@ -239,12 +239,11 @@ ggsave(plot = user_prod_rf, filename = paste0("plots/user_prod_rf.png"), device 
 
 
 # supp plots for full ML/RF results
-plot_by_structure(metric_results_long, "max-likelihood", origins = c("test"), suffix = "-test")
-
 plot_by_structure(metric_results_long, "max-likelihood", origins = c("test", "true"))
 plot_by_structure(metric_results_long, "random-forest", origins = c("test", "true"))
-#plot_by_structure(metric_results_long, "nearest-n", origins = c("train", "test", "true"))
 
+#plot_by_structure(metric_results_long, "nearest-n", origins = c("train", "test", "true"))
+#plot_by_structure(metric_results_long, "max-likelihood", origins = c("test"), suffix = "-test")
 #plot_by_model(metric_results_long, c("max-likelihood","random-forest", "nearest-n"), origins = c("test"), suffix = "ml-nn-rf-test")
 
 plot_user_prod(metric_results_long, c("max-likelihood"), suffix = "ml-user-prod-test")
@@ -258,7 +257,7 @@ plot_by_structure(metric_results_long, "max-likelihood", origins = c("true","tes
                   metrics = c("bt_prod", "ew_prod", "ttt_prod", "wh_prod"),
                   suffix = "-producer", scales = "free_x")
 
-plot_by_structure(metric_results_long, "max-likelihood", origins = c("train","test","true"))
+# plot_by_structure(metric_results_long, "max-likelihood", origins = c("train","test","true"))
 
 # plot_by_structure(metric_results_long, "random-forest", origins = c("all", "true","test"),
 #                 metrics = c("perc_agr", "bt_user", "ew_user", "ttt_user", "wh_user"),
@@ -292,7 +291,7 @@ mle_iter_cummean <- metric_results_long %>%
   ggplot(., aes(y = cum_med, x = iterations)) +
   geom_line(aes(colour = scenario)) +
   #scale_colour_brewer(palette = "RdYlGn") +
-  ylab("Percentage agreement") + xlab("Number of iterations") + theme_bw() +
+  ylab("Overall Accuracy") + xlab("Number of iterations") + theme_bw() +
   facet_wrap(facets = ~sample_fraction)
 ggsave("plots/mle_perc-agr_efficiency.png", plot = mle_iter_cummean, device = "png", width = 12, height = 8)
 
