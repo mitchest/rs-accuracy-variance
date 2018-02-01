@@ -78,6 +78,21 @@ user_accuracy <- function(conf_mat) {
   data.frame(as.list(ret))
 }
 
+# mapped area as per Olofsson et al. 2014;
+mapped_areas <- function(idx, conf_mat_list, area_tables) {
+  # pixel counts
+  mapped_areas <- as.numeric(area_tables[[idx]])
+  if (length(mapped_areas) != 4) {return(rep(NA,4))}
+  mapped_areas_p <- mapped_areas / sum(mapped_areas)
+  # p_ij matrix
+  if (dim_check(conf_mat_list[[idx]])) {return(rep(NA,4))}
+  conf_mat_nij <- matrix(as.vector(prop.table(conf_mat_list[[idx]], 1)), nrow = 4, ncol = 4)
+  conf_mat_pij <- matrix(mapped_areas_p, nrow = 4, ncol = 4) * conf_mat_nij # DANGER - hard coded to 4 classes
+  # area estimates
+  areas_pk <- colSums(conf_mat_pij)
+  area_estimates <- areas_pk * sum(mapped_areas)
+  area_estimates / sum(area_estimates)
+}
 
 
 # collect metrics ---------------------------------------------------------
@@ -170,32 +185,64 @@ collect_one_iteration <- function(iter_n, get_this, big_list, data) {
   )) %>% mutate(iter_n = iter_n)
 }
 
-collect_image_results <- function(this_row, get_this, iter_n){
+collect_image_results <- function(this_row, get_this, iter_n, data){
   if (get_this$type[this_row] == "boot") {
     area_tables <- iter_n[[get_this$scenario[this_row]]][[get_this$method[this_row]]]
+    conf_mat_list <- lapply(
+      X = 1:length(iter_n[["boot"]][[1]]),
+      FUN = get_conf_mat,
+      iter_n[["boot"]][["test"]],
+      iter_n[["boot"]][[get_this$tt[this_row]]],
+      data)
+    area_estimates <- lapply(
+      X = 1:length(iter_n[["boot"]][[1]]),
+      FUN = mapped_areas,
+      conf_mat_list, area_tables)
   } else {
     area_tables <- iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$method[this_row]]]
+    conf_mat_list <- lapply(
+      X = 1:length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]),
+      FUN = get_conf_mat,
+      iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][["test"]],
+      iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[get_this$tt[this_row]]],
+      data)
+    area_estimates <- lapply(
+      X = 1:length(iter_n[[get_this$scenario[this_row]]][[get_this$type[this_row]]][[1]]),
+      FUN = mapped_areas,
+      conf_mat_list, area_tables)
   }
-  prop_tables <- lapply(area_tables, function(x) {x/sum(x)})
   data.frame(
-    Banksia = unlist(lapply(prop_tables, `[[`, 1)),
-    Eucalypt = unlist(lapply(prop_tables, `[[`, 2)),
-    Teatree = unlist(lapply(prop_tables, `[[`, 3)),
-    Wetheath = unlist(lapply(prop_tables, `[[`, 4)),
+    Banksia = unlist(lapply(area_estimates, `[[`, 1)),
+    Eucalypt = unlist(lapply(area_estimates, `[[`, 2)),
+    Teatree = unlist(lapply(area_estimates, `[[`, 3)),
+    Wetheath = unlist(lapply(area_estimates, `[[`, 4)),
     # method info
     type = get_this$type[this_row],
     method = get_this$method[this_row],
     scenario = get_this$scenario[this_row])
+  
+  # pixel counting method
+  # prop_tables <- lapply(area_tables, function(x) {x/sum(x)})
+  # data.frame(
+  #   Banksia = unlist(lapply(prop_tables, `[[`, 1)),
+  #   Eucalypt = unlist(lapply(prop_tables, `[[`, 2)),
+  #   Teatree = unlist(lapply(prop_tables, `[[`, 3)),
+  #   Wetheath = unlist(lapply(prop_tables, `[[`, 4)),
+  #   # method info
+  #   type = get_this$type[this_row],
+  #   method = get_this$method[this_row],
+  #   scenario = get_this$scenario[this_row])
 }
 
-collect_image_iteration <- function(iter_n, get_this, big_list) {
+collect_image_iteration <- function(iter_n, get_this, big_list, data) {
   print(paste0("Collecting iteration ", iter_n))
   print(Sys.time())
   rbindlist(lapply(
     X = 1:nrow(get_this),
     FUN = collect_image_results,
     get_this,
-    big_list[[iter_n]]
+    big_list[[iter_n]],
+    data
   )) %>% mutate(iter_n = iter_n)
 }
 

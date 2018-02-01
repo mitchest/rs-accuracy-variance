@@ -60,7 +60,7 @@ get_this_image <- data.frame(
            rep(names(big_list_image[[1]][["rrcv"]]), each = 2),
            rep(names(big_list_image[[1]][["kfold"]]), each = 2)),
   method = c(rep(c("image_lda", "image_rf"), 13)),
-  tt = c(rep(c("image", "image"), 13)),
+  tt = c(rep(c("test_lda", "test_rf"), 13)),
   stringsAsFactors = F)
 
 
@@ -68,7 +68,8 @@ get_this_image <- data.frame(
 # calculate stats ---------------------------------------------------------
 
 # for image_preds
-image_results <- collect_image_iteration(1, get_this_image, big_list_image)
+image_results <- collect_image_iteration(1, get_this_image, big_list_image, survey_points) %>%
+  na.omit()
 saveRDS(image_results, file="image_results.rds")
 
 metric_results <- rbindlist(lapply(
@@ -145,7 +146,7 @@ fig3dat <- image_results_long %>%
                                 "Teatree" = "Tea Tree Thicket", "Wetheath" = "Wet Heath"),
          sample_structure = recode(sample_structure, "class-space" = "class & space"),
          value = value * 100) # % for prettier numbers on plot
-fig3 <- ggplot(figdat, aes(y = value)) +
+fig3 <- ggplot(fig3dat, aes(y = value)) +
   geom_violin(aes(x = sample_structure, fill = sample_fraction), scale = "area", draw_quantiles = c(0.05,0.5,0.9), lwd=0.25) +
   scale_fill_manual("Resampling design", values = c("#969696", "#d55e00", "#f0e442", "#56b4e9")) +
   scale_y_continuous(breaks = pretty_breaks) +

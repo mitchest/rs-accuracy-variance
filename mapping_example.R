@@ -83,7 +83,7 @@ fit_and_map <- function(niter, data, image_data) {
 }
 
 # fit n iterations of the resmapling routine
-mapping_runs <- lapply(1:10, fit_and_map, survey_points, image_data)
+mapping_runs <- lapply(1:800, fit_and_map, survey_points, image_data)
 saveRDS(mapping_runs, file = "A:/1_UNSW/0_data/Dharawal_project/mapping_runs.rds")
 
 mapping_runs <- readRDS("A:/1_UNSW/0_data/Dharawal_project/mapping_runs.rds")
@@ -97,6 +97,26 @@ med_ci <- function(x) {
   round(c(med,ci)*100, 0)
 }
 
+# mapped area as per Olofsson et al. 2014;
+mapped_areas <- function(idx, conf_mat_list, area_tables) {
+  # util function
+  dim_check <- function(x, len = 4) { # DANGER - hard coded to 4 classes, use len = if error matrix is different size
+    dim(x)[1] != len | dim(x)[2] != len
+  }
+  # pixel counts
+  mapped_areas <- as.numeric(area_tables[[idx]])
+  if (length(mapped_areas) != 4) {return(rep(NA,4))}
+  mapped_areas_p <- mapped_areas / sum(mapped_areas)
+  # p_ij matrix
+  if (dim_check(conf_mat_list[[idx]])) {return(rep(NA,4))}
+  conf_mat_nij <- matrix(as.vector(prop.table(conf_mat_list[[idx]], 1)), nrow = 4, ncol = 4)
+  conf_mat_pij <- matrix(mapped_areas_p, nrow = 4, ncol = 4) * conf_mat_nij # DANGER - hard coded to 4 classes
+  # area estimates
+  areas_pk <- colSums(conf_mat_pij)
+  area_estimates <- areas_pk * sum(mapped_areas)
+  area_estimates / sum(area_estimates)
+}
+
 # get vector of accuracy stats and get mean/intervals
 accuracy_distribution <- unlist(lapply(mapping_runs, `[[`, 1))
 med_ci(accuracy_distribution)
@@ -105,12 +125,16 @@ med_ci(accuracy_distribution)
 class_areas <- lapply(mapping_runs, `[[`, 2)
 class_areas <- lapply(class_areas, table)
 
-class_proportions <- lapply(class_areas, function(x){(x/sum(x))})
+conf_mat_list <- lapply(mapping_runs, `[[`, 3)
+conf_mat_list <- lapply(conf_mat_list, table)
+
+mapped_areas_list <- lapply(1:length(class_areas), mapped_areas, conf_mat_list, class_areas)
+
 class_proportions <- list(
-  Banksia = unlist(lapply(class_proportions, `[[`, 1)),
-  Eucalypt = unlist(lapply(class_proportions, `[[`, 2)),
-  Teatree = unlist(lapply(class_proportions, `[[`, 3)),
-  Wetheath = unlist(lapply(class_proportions, `[[`, 4)))
+  Banksia = unlist(lapply(mapped_areas_list, `[[`, 1)),
+  Eucalypt = unlist(lapply(mapped_areas_list, `[[`, 2)),
+  Teatree = unlist(lapply(mapped_areas_list, `[[`, 3)),
+  Wetheath = unlist(lapply(mapped_areas_list, `[[`, 4)))
 
 lapply(class_proportions, med_ci)
 
@@ -122,7 +146,7 @@ lapply(class_proportions, med_ci)
 # Olofsson, P., Foody, G. M., Herold, M., Stehman, S. V., Woodcock, C. E., & Wulder, M. A. (2014). Good practices for estimating area and assessing accuracy of land change. Remote Sensing of Environment, 148, 42-57.
 
 ### choose an iteration (close to median value?) to do simultaneous intervals on
-eg_run <- 5 # run chosen for the simultaneous example
+eg_run <- 17 # run chosen for the simultaneous example
 test_true <- mapping_runs[[eg_run]][[3]]
 conf_mat <- table(test_true$test, test_true$true)
 mapped_areas <- table(mapping_runs[[eg_run]][[2]])
@@ -165,7 +189,7 @@ sampled_accuracies <- function(test_true) {
     sample_frac(1, replace = T) # this is the bootstrap
   conf_mat <- table(data$test, data$true)
   list(perc_agr = sum(diag(conf_mat)) / sum(conf_mat),
-             user = diag(conf_mat) / rowSums(conf_mat))
+       user = diag(conf_mat) / rowSums(conf_mat))
 }
 
 singlerun_resample <- replicate(n = 1000,
@@ -200,7 +224,7 @@ singlerun_area_95 <- (unlist(lapply(singlerun_error_df, quantile, 0.975)) -
 # full resample
 med_ci(accuracy_distribution)
 # bootstrap single run
-med_ci(singlerun_oa)
+med_ci(singlerun_oa); sd(singlerun_oa) * 1.96
 # simultaneous single run
 round(c(estimate=oa, `2.5%`=oa-oa_95, `97.5%`=oa+oa_95)*100)
 round(c(oa, oa_95)*100)
